@@ -1233,19 +1233,19 @@ float toshibaRad(float th)
 
 // shift estimation from center-of-kspace view (POCS)
 // input is PW (ch, z:view, y:slc, x:read)
-// -> convert to 2D (x: slice, y: view)
+// output unit is pixels
 - (RecImage *)shiftFromK0
 {
 	RecImage	*prj;
 	RecImage	*mean;
 	RecImage	*st, *mv, *sft, *nsft;		// stationary[xDim], moving[xDim], shift[yDim]
 	RecImage	*est, *dif;
-	int			i, j, ix, iter, nIter = 20;
+	int			i, j, ix, iter, nIter = 20; //20;
 	int			xDim, yDim;
 	float		*m, *p;
 	float		err, mx;
 	NSString	*path;
-	BOOL		dbg = NO;
+	BOOL		dbg = YES;
 
 // ============ make 2D input from PW ======
 	prj = [self combineForLoop:[self topLoop]];	// PW
@@ -1281,18 +1281,20 @@ float toshibaRad(float th)
 		}
 	}
 	prj = [dif copy];
-//	mv = [prj sdForLoop:[prj yLoop]];
 
 // tri win
 	[prj fTriWin1DforLoop:[prj xLoop]];
 	mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
 	st = [RecImage imageWithImage:mv];
 
+    // remove low freq along y
+    [prj cosFilter:[prj yLoop] order:4 keepDC:YES];
+
 // === iteration ===
 	for (iter = 1; iter <= nIter; iter++) {
 		est = [prj copy];
 		[est subImage:st];
-		sft = [est corr1dWithRef:mv];	// unit:pixels ### Phase loop not preserved !!!???
+		sft = [est corr1dWithRef:mv];	// unit:pixels
 
 		mx = [sft meanVal];
 		[sft addConst:-mx];
@@ -1310,7 +1312,9 @@ float toshibaRad(float th)
 		[dif fTriWin1DforLoop:[dif xLoop]];
 
 		err = [dif rmsVal];
-//printf("%d %e\n", iter, err);
+        if (dbg) {
+            printf("%d %e\n", iter, err);
+        }
 		mean = [dif avgForLoop:[dif yLoop]];
 		[st addImage:mean];
 
@@ -1321,8 +1325,10 @@ float toshibaRad(float th)
 
 		if (dbg && (iter == nIter)) {
 			ix = 1;
-			path = [NSString stringWithFormat:@"IMG_sft%d.img", ix];
-			[sft saveAsKOImage:path];
+            path = [NSString stringWithFormat:@"IMG_prj.img"];
+            [prj saveAsKOImage:path];
+            path = [NSString stringWithFormat:@"IMG_sft%d.img", ix];
+            [sft saveAsKOImage:path];
 			path = [NSString stringWithFormat:@"IMG_mv%d.img", ix];
 			[mv saveAsKOImage:path];
 			path = [NSString stringWithFormat:@"IMG_st%d.img", ix];
@@ -1331,6 +1337,10 @@ float toshibaRad(float th)
 			[dif saveAsKOImage:path];
 			path = [NSString stringWithFormat:@"IMG_ms%d.img", ix];
 			[est saveAsKOImage:path];
+            p = [sft data];
+            for (i = 0; i < [sft xDim]; i++) {
+                printf("%d %f\n", i, p[i]);
+            }
 		}
 	}
 

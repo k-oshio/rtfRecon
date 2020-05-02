@@ -44,7 +44,7 @@ int
 main()
 {
     @autoreleasepool {
-        test0();
+    //    test0();
     //	test1();
 	//	test2();
 	//	test3();
@@ -70,7 +70,7 @@ main()
 	//	test23();
 	//	test24();
 	//	test25();
-	//	test26();
+		test26();
 	//	test27();
     }
 }

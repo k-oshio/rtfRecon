@@ -8,7 +8,9 @@
 //
 //  forked off from rtf3Recon4.m    4-28-2020
 
-//  update for central line nav
+//  started update for central line nav 5-2-2020
+//  cmd-line arg -> hard-coded path + zflip etc
+
 
 /* 2-25-2015
 
@@ -63,17 +65,21 @@ main(int ac, char *av[])
     int             i;
     float           dlt, prev_dlt;
 	float			sft_scl;
-    BOOL            term = NO;
-    BOOL            scaleBeforeGrid = YES;  // "scale before grid" is better
-	BOOL			nav = NO;
 	int				coil = GE_Card_8_new;
-	float			ncc;	// normalized cross correlation
-	RecBlock3		blk;
-
+ 
 TIMER_ST
     @autoreleasepool {
-        system("rm *.img");
-        system("rm sft*.txt");
+        if (1) {    // test k0 nav
+            pw = [RecImage imageFromFile:@"pw_sav.recimg" relativePath:YES];
+            [pw dumpLoops];
+            sft = [pw shiftFromK0];
+            exit(0);
+        }
+// ###
+
+    system("rm *.img");
+    system("rm sft*.txt");
+
     // raw : ch, sl, pe, rd
         if (ac < 2) {
             printf("rtf3Recon <pNumber(int)><zflip>\n");
@@ -122,8 +128,8 @@ TIMER_ST
 		pw_c = [pw combinePWForLoop:ch withCoil:coil];
         [pw_c saveAsKOImage:@"pw_c.img"];
         [pw saveAsKOImage:@"pw.img"];
-
-
+        [pw saveToFile:@"pw_sav" relativePath:YES];
+   
         traj = [RecImage imageOfType:RECIMAGE_KTRAJ withLoops:pe, rdZF, nil];
 
         thTab = [traj initRadialTraj];          // for gridding
@@ -148,242 +154,9 @@ TIMER_ST
 		[img_coro_c copyImage:img_c];
 		[img_coro_c saveAsKOImage:@"img_coro.img"];
 
-
-exit(0);
-// 4-28-2020
-
-
-	// virtual navigator ###### -> output is [sft]
-	// scale: diaphragm motion is largest
-		if (nav) {	// left diaphragm (spleen) -> optical flow
-			RecImage	*nav, *ref, *srt;
-			int			i, n;
-			float		*p, mx;
-			
-	ref = [pw sliceAtIndex:4 forLoop:ch];
-	[ref saveAsKOImage:@"ref.img"];
-			nav = [ref avgForLoop:[ref xLoop]];
-			[nav saveAsKOImage:@"nav.img"];
-			
-	//		sft = [nav opticalFlow1d];
-			sft = [nav detectShift];
-			[sft saveAsKOImage:@"sft.img"];
-			if (0) {
-				p = [sft data];
-				n = [sft dataLength];
-				for (i = 0; i < n; i++) {
-					printf("%d %f\n", i, p[i]);
-				}
-			}
-
-			ref = [ref correctZShift:sft];	// z
-			[ref saveAsKOImage:@"pw_s.img"];
-
-			srt = [sft sortZSft];
-			[srt saveAsKOImage:@"sft_sort.img"];
-			if (0) {
-				p = [srt data];
-				n = [srt dataLength];
-				for (i = 0; i < n; i++) {
-					printf("%d %f\n", i, p[i]);
-				}
-			}
-			sft_scl = 1.2;
-		} else {
-	// PCA shift detection ######
-	// scale estimation is necessary
-	// chk direction
-			pwr = [img reprojectWithMap:radMap];
-			corr = [pw xyCorrelationWith:pwr width:0.2 triFilt:YES];	// 0.2
-			sft = [corr corrToSftZ];	// pixels
-		//	[sft negate];	// ??
-			[sft saveAsKOImage:@"sft.img"];
-			[sft dumpShift];
-		// ### testing...
-			sft_scl = 1.0;	// ### est scale & direction using binned recon
-			[sft multByConst:sft_scl];
-			pws = [pw_c correctZShift:sft];
-			[pws saveAsKOImage:@"pws.img"];
-		}
-
-		img_lap = [img_coro_c copy];
-		[img_lap laplace3d:REC_FORWARD];
-		[img_lap magnitude];
-
-		[img_lap gauss3DLP:0.1];
-		[img_lap saveAsKOImage:@"img_coro_l.img"];
-
-	// binned recon / 1D non-rigid
-		if (1) {
-			int			nBin = 2;
-			RecImage	*pwBins, *bTab, *map;
-			RecImage	*pwb, *rawb, *trajb;	// probably no need for pwb
-			RecImage	*imgb[3], *def1, *def2, *img1, *img2, *img0;
-			RecImage	*sftb;
-			int			i, j;
-			float		mn;
-
-			// pwBins [proj]
-			pwBins = [sft binTabWithNBins:nBin binSize:[sft xDim] / 2];
-			[pwBins saveAsKOImage:@"bins.img"];
-
-			// reconstruct each bin
-			for (i = 0; i < nBin; i++) {
-				bTab = [pwBins sliceAtIndex:i forLoop:[pwBins yLoop]];
-				pwb = [pw replaceLoop:pe withTab:bTab];	// 0: exp, 1: mid, 2 inh
-				rawb = [pwb copy];
-				[rawb fft1d:[rawb xLoop] direction:REC_INVERSE];
-				[rawb swapLoop:sl withLoop:[pwb zLoop]];
-
-				trajb = [traj replaceLoop:pe withTab:bTab];
-				grid = [RecGridder gridderWithTrajectory:trajb andRecDim:[img xDim]];
-				[grid grid2d:rawb to:img];
-				path = [NSString stringWithFormat:@"imgb%d.img", i];
-			//	[img saveAsKOImage:path];
-				[img saveComb:ch as:path];
-				imgb[i] = [img copy];	// save
-
-				img_coro_c = [img combineForLoop:ch];
-				[img_coro_c swapLoop:[img_coro_c zLoop] withLoop:[img_coro_c yLoop]];
-				path = [NSString stringWithFormat:@"imgb%d_coro.img", i];
-				[img_coro_c saveAsKOImage:path];
-			//##
-				[img_coro_c laplace3d:REC_FORWARD];
-				[img_coro_c magnitude];
-	//	[img_coro_c gradMag3d];
-				[img_coro_c gauss3DLP:0.1];
-				[img_coro_c divImage:img_lap];
-			//	[img_coro_c subImage:img_lap];
-				path = [NSString stringWithFormat:@"imgb%d_coro_l.img", i];
-				[img_coro_c saveAsKOImage:path];
-			}
-
-	// 2 step diff
-			if (1) {
-				float		*df, *dfz;
-				float		mxz;
-				int			i, n;
-				RecImage	*sftz, *sftxy, *hist;
-
-				// correction (just add 3 bins after warping)
-				// warping channels separately doesn't help
-				img1 = [imgb[1] copy];
-				img0 = [imgb[0] copy];	// ref
-				img0 = [img0 combineForLoop:ch];
-				img1 = [img1 combineForLoop:ch];
-				def1 = [img1 defVectorWithRef:img0];
-				[def1 saveAsKOImage:@"def1.img"];
-				[def1 negate];
-
-				map = [def1 scaleMapToImage:img1];
-				map_coro = [map copy];
-				[map_coro swapLoop:[map_coro yLoop] withLoop:[map_coro zLoop]];
-				[map_coro saveAsKOImage:@"def10.img"];
-
-				// ### make 2d histo (zy, zx)
-				sftz = [RecImage imageOfType:RECIMAGE_REAL withImage:map_coro];
-				n = [sftz dataLength];
-				df = [sftz data];
-				dfz = [map_coro data] + n * 2;	// z
-				for (i = 0; i < n; i++) {
-					df[i] = dfz[i];
-				}
-				sftxy = [RecImage imageWithImage:sftz];
-				df = [sftxy data];
-				dfz = [map_coro data] + n;
-				for (i = 0; i < n; i++) {
-					df[i] = dfz[i];
-				}
-				[sftz saveAsKOImage:@"sftz.img"];
-				[sftxy saveAsKOImage:@"sftx.img"];
-				hist = [RecImage imageOfType:RECIMAGE_REAL
-					withLoops:[sftz zLoop], [RecLoop loopWithDim:100], [RecLoop loopWithDim:100], nil];
-				[hist histogram2dWithX:sftz andY:sftxy];
-			//	hist = [hist logP1];
-				[hist saveAsKOImage:@"sft_hist.img"];
-exit(0);
-
-				map = dispToMap(map);
-				tmp_img = [RecImage imageWithImage:img0];
-				[tmp_img resample3d:img1 withMap:map];
-				
-				[tmp_img saveAsKOImage:@"imgs10.img"];
-				[img_coro_c copyImage:tmp_img];
-				[img_coro_c saveAsKOImage:@"imgs10_coro.img"];
-				
-				n = [def1 dataLength];
-				df = [def1 data] + n * 2;	// z shift
-				mxz = 0;
-				for (i = 0; i < n; i++) {
-					if (fabs(mxz) < fabs(df[i])) {
-						mxz = df[i];
-					}
-				}
-				printf("mx zshift = %f\n", mxz);
-			}
-
-		// focused rigid body corr
-			if (1) {
-				float			scl;
-				int				nscl = 10;	// 20
-				RecImage		*fcs, *imgs, *mxSft;
-				RecLoop			*scLp;
-				RecLoopControl	*lc;
-
-				scLp = [RecLoop loopWithDataLength:nscl];
-				// coronal
-				fcs  = [RecImage imageOfType:RECIMAGE_REAL withLoops:scLp, [img yLoop], [img zLoop], [img xLoop], nil];
-				imgs = [RecImage imageOfType:RECIMAGE_REAL withLoops:scLp, [img yLoop], [img zLoop], [img xLoop], nil];
-
-				grid = [RecGridder gridderWithTrajectory:traj andRecDim:[img xDim]];
-				for (i = 0; i < nscl; i++) {
-					scl = sft_scl / nscl * (i + 1);
-					printf("scale %d = %f\n", i, scl);
-					sftb = [sft copy];
-					[sftb multByConst:scl];
-					pws = [pw correctZShift:sftb];
-					tmp_img = [pws copy];
-					tmp_img = [tmp_img combineForLoop:ch];
-					path = [NSString stringWithFormat:@"pws%d.img", i];
-					[tmp_img saveAsKOImage:path];
-
-					raw = [pws copy];
-					[raw fft1d:[raw xLoop] direction:REC_INVERSE];
-					[raw swapLoop:[raw yLoop] withLoop:[raw zLoop]];
-
-					img = [RecImage imageOfType:RECIMAGE_COMPLEX withLoops:ch, sl, ky, kx, nil];
-					[grid grid2d:raw to:img];
-					img_c = [img combineForLoop:ch withCoil:coil];
-					path = [NSString stringWithFormat:@"imgs%d.img", i];
-					[img_c saveAsKOImage:path];
-					[imgs copySlice:img_c atIndex:i forLoop:scLp];
-					img_coro_c = [img_c copy];
-
-					[img_coro_c laplace3d:REC_FORWARD];
-					[img_coro_c magnitude];
-					[img_coro_c gauss3DLP:0.1];
-					[img_coro_c divImage:img_lap];
-					[fcs copySlice:img_coro_c atIndex:i forLoop:scLp];
-				}
-				[fcs saveAsKOImage:@"imgLapScl.img"];
-				[imgs saveAsKOImage:@"imgs.img"];
-
-			// find best focus index
-				mxSft = [fcs maxIndexForLoop:scLp];
-				[mxSft saveAsKOImage:@"imgMxSft.img"];
-
-			// select best image
-				img_coro = [imgs selectSft:mxSft];
-				[img_coro saveAsKOImage:@"img_final_coro.img"];
-				[img_c copyImage:img_coro];
-				[img_c saveAsKOImage:@"img_final.img"];
-			}
-			exit(0);
-		}
-
-
-
-
+// 4-28-2020 ###
+        sft = [pw shiftFromK0];
+        [sft saveAsKOImage:@"IMG_sft"];
 
 
 

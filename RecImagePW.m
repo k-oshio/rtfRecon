@@ -1347,6 +1347,71 @@ float toshibaRad(float th)
 	return sft;
 }
 
+- (RecImage *)stepCorrWithPW:(RecImage *)pw gridder:(RecGridder *)grid sft:(RecImage *)sft // input(self) is img
+{
+    RecImage        *img, *imgs, *mxSft;
+    RecImage        *sft_scl, *pws, *raw;
+    RecImage        *tmp_img, *img_c;
+    int             i;
+    float           scl;
+    int             nScl = 10;
+    float           scl_range = 1.5;    // (0 - 2.0)
+    RecLoop         *scLp, *ch;
+    float           lap_w = 0.2;    // 0.3
+    BOOL            dbg = YES;
+
+    img = [self copy];
+    ch = [img topLoop]; // should check for existence of ch loop
+    scLp = [RecLoop loopWithDataLength:nScl];
+    imgs = [RecImage imageOfType:RECIMAGE_REAL withLoops:scLp, [img yLoop], [img zLoop], [img xLoop], nil];    // coronal
+
+    for (i = 0; i < nScl; i++) {
+        scl = (float)i * scl_range / nScl;
+        printf("scale %d = %f\n", i, scl);
+
+        sft_scl = [sft copy];            // pixels
+        [sft_scl multByConst:scl];
+        pws = [pw correctZShift:sft_scl]; // z shift
+
+        tmp_img = [pws copy];
+        raw = [pws copy];
+        [raw fft1d:[raw xLoop] direction:REC_INVERSE];
+        [raw swapLoop:[raw yLoop] withLoop:[raw zLoop]];
+        [grid grid2d:raw to:img];
+        img_c = [img combineForLoop:ch];
+        [imgs copySlice:img_c atIndex:i forLoop:scLp];
+    }
+    tmp_img = [imgs copy];
+    [tmp_img swapLoop:scLp withLoop:[img yLoop]];
+    [tmp_img saveAsKOImage:@"imgs_scl.sav"];
+
+// (5) === find best focus scale ====
+    printf("5: select best shift\n");
+    tmp_img = [imgs copy];
+//            [tmp_img laplace2d:REC_FORWARD];
+    [tmp_img grad1dForLoop:[tmp_img yLoop]];
+    [tmp_img magnitude];
+    [tmp_img square];
+    [tmp_img gauss3DLP:lap_w];
+    [tmp_img swapLoop:scLp withLoop:[img yLoop]];    // ## chk
+    [tmp_img saveAsKOImage:@"imgs_scl_lap.img"];
+
+    mxSft = [tmp_img peakIndexForLoop:scLp];    // sharper with larger gradient_sq
+    [mxSft saveAsKOImage:@"imgMxSft.img"];        // ok
+    [imgs swapLoop:scLp withLoop:[img yLoop]];    // ## chk
+    tmp_img = [imgs selectSft:mxSft];            // ### loop ? [scl z x]
+    // ####
+    [tmp_img saveAsKOImage:@"imgs_final.img"];
+
+    [mxSft gauss2DLP:0.1];
+    [mxSft saveAsKOImage:@"imgMxSft_f.img"];
+    tmp_img = [imgs selectSftF:mxSft];
+    [tmp_img saveAsKOImage:@"imgs_final_F.img"];
+    [tmp_img swapLoop:[tmp_img yLoop] withLoop:[tmp_img zLoop]];
+    [tmp_img saveAsKOImage:@"imgs_final_ax.img"];
+    return imgs;
+}
+
 // sft: unit is pixels
 // now z only #### make this really 1d
 - (RecImage *)correctZShift:(RecImage *)sft;	// z

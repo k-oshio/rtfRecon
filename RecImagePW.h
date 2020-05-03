@@ -54,6 +54,7 @@
 - (RecImage *)opticalFlow2dWithRef:(RecImage *)ref;
 - (RecImage *)opticalFlow3dWithRef:(RecImage *)ref;
 - (RecImage *)shiftFromK0;	// shift estimation from center-of-kspace view (POCS)
+- (RecImage *)stepCorrWithPW:(RecImage *)pw gridder:(RecGridder *)grid sft:(RecImage *)sft; // input(self) is img
 
 // correction
 - (RecImage *)correctShift:(RecImage *)sft;		// xy (Pw)

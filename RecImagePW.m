@@ -1284,11 +1284,45 @@ float toshibaRad(float th)
 
 // tri win
 	[prj fTriWin1DforLoop:[prj xLoop]];
-	mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
-	st = [RecImage imageWithImage:mv];
+    
+// remove low freq along y
+    [prj cosFilter:[prj yLoop] order:12 keepDC:YES]; // 4
+    
+// initial est
+    int mode = 2;
+    switch (mode) {
+    case 0 :
+        mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
+        st = [RecImage imageWithImage:mv];  // 0
+        break;
+    case 1 :
+        st = [[prj avgForLoop:[prj yLoop]] multByConst:0.5];  // p/2
+        mv = [st copy];
+        break;
+    case 2 :
+        st = [prj avgForLoop:[prj yLoop]];  // p avg
+        mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
+        [mv subImage:st];
+        break;
+    case 3 :
+        st = [prj avgForLoop:[prj yLoop]];  // p avg
+        mv = [[prj subImage:st] avgForLoop:[prj yLoop]];
+        break;
+    }
 
-    // remove low freq along y
-    [prj cosFilter:[prj yLoop] order:4 keepDC:YES];
+    // chk input
+    if (dbg) {
+        path = [NSString stringWithFormat:@"IMG_prj.img"];
+        [prj saveAsKOImage:path];
+        dif = [prj copy];
+        est = [prj avgForLoop:[prj yLoop]];
+        [dif subImage:est];
+        path = [NSString stringWithFormat:@"IMG_prj_avg.img"];
+        [dif saveAsKOImage:path];
+    }
+
+    
+    
 
 // === iteration ===
 	for (iter = 1; iter <= nIter; iter++) {
@@ -1325,8 +1359,6 @@ float toshibaRad(float th)
 
 		if (dbg && (iter == nIter)) {
 			ix = 1;
-            path = [NSString stringWithFormat:@"IMG_prj.img"];
-            [prj saveAsKOImage:path];
             path = [NSString stringWithFormat:@"IMG_sft%d.img", ix];
             [sft saveAsKOImage:path];
 			path = [NSString stringWithFormat:@"IMG_mv%d.img", ix];
@@ -1337,6 +1369,11 @@ float toshibaRad(float th)
 			[dif saveAsKOImage:path];
 			path = [NSString stringWithFormat:@"IMG_ms%d.img", ix];
 			[est saveAsKOImage:path];
+            dif = [est copy];
+            [dif subImage:st];
+            path = [NSString stringWithFormat:@"IMG_ms_st%d.img", ix];
+            [dif saveAsKOImage:path];
+
             p = [sft data];
             for (i = 0; i < [sft xDim]; i++) {
                 printf("%d %f\n", i, p[i]);
@@ -1355,7 +1392,7 @@ float toshibaRad(float th)
     int             i;
     float           scl;
     int             nScl = 10;
-    float           scl_range = 1.5;    // (0 - 2.0)
+    float           scl_range = 1.0;    // (0 - 2.0)
     RecLoop         *scLp, *ch;
     float           lap_w = 0.2;    // 0.3
     BOOL            dbg = YES;
@@ -1372,9 +1409,12 @@ float toshibaRad(float th)
         sft_scl = [sft copy];            // pixels
         [sft_scl multByConst:scl];
         pws = [pw correctZShift:sft_scl]; // z shift
-
-        tmp_img = [pws copy];
+        if (i == nScl/2) {
+            tmp_img = [pws combineForLoop:ch];
+            [tmp_img saveAsKOImage:@"IMG_pws"];
+        }
         raw = [pws copy];
+    [raw magnitude];    // necessary for akasaka etc
         [raw fft1d:[raw xLoop] direction:REC_INVERSE];
         [raw swapLoop:[raw yLoop] withLoop:[raw zLoop]];
         [grid grid2d:raw to:img];
@@ -1383,7 +1423,7 @@ float toshibaRad(float th)
     }
     tmp_img = [imgs copy];
     [tmp_img swapLoop:scLp withLoop:[img yLoop]];
-    [tmp_img saveAsKOImage:@"imgs_scl.sav"];
+    [tmp_img saveAsKOImage:@"imgs_scl.img"];
 
 // (5) === find best focus scale ====
     printf("5: select best shift\n");

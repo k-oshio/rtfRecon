@@ -1289,7 +1289,7 @@ float toshibaRad(float th)
     [prj cosFilter:[prj yLoop] order:12 keepDC:YES]; // 4
     
 // initial est
-    int mode = 2;
+    int mode = 3;
     switch (mode) {
     case 0 :
         mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
@@ -1300,7 +1300,7 @@ float toshibaRad(float th)
         mv = [st copy];
         break;
     case 2 :
-        st = [prj avgForLoop:[prj yLoop]];  // p avg
+        st = [[prj avgForLoop:[prj yLoop]] multByConst:0.5];  // p avg
         mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
         [mv subImage:st];
         break;
@@ -1321,9 +1321,6 @@ float toshibaRad(float th)
         [dif saveAsKOImage:path];
     }
 
-    
-    
-
 // === iteration ===
 	for (iter = 1; iter <= nIter; iter++) {
 		est = [prj copy];
@@ -1333,7 +1330,7 @@ float toshibaRad(float th)
 		mx = [sft meanVal];
 		[sft addConst:-mx];
 
-		nsft = [sft copy];
+        nsft = [sft copy];
 		[nsft negate];
 		
 		[est clear];
@@ -1484,18 +1481,22 @@ float toshibaRad(float th)
 
 // 1D shift for central-view shift estimation
 // unit: pixels
-// ### -> multi-channel
 - (RecImage *)corr1dWithRef:(RecImage *)ref
 {
-	RecImage	*sft;
+	RecImage	*sft, *corr;
 	RecImage	*tmp1, *ref2;
 	float		w = 0.2;	// 0.05
 
 	tmp1 = [self copy];
 	ref2 = [ref copy];
-	sft = [self xCorrelationWith:ref width:w triFilt:NO];
-	sft = [sft corrToSft1d:[sft xLoop]];
-	
+    // correlation
+	corr = [tmp1 xCorrelationWith:ref width:w triFilt:NO];
+ [corr saveAsKOImage:@"IMG_corr"];   
+    [corr crop:[corr xLoop] to:16]; // 32
+    // peak detection -> sft
+	sft = [corr corrToSft1d:[corr xLoop]];
+ [sft saveAsKOImage:@"IMG_sft"];   
+
 	return sft;
 }
 

@@ -279,15 +279,10 @@ TIMER_END("initial gridding");
 
 			mxSft = [tmp_img peakIndexForLoop:scLp];	// sharper with larger laplacian
 			[mxSft saveAsKOImage:@"imgMxSft.img"];		// ok
-			[imgs swapLoop:scLp withLoop:[img yLoop]];	// ## chk
-			tmp_img = [imgs selectSft:mxSft];			// ### loop ? [scl z x]
-			// ####
-			[tmp_img saveAsKOImage:@"imgs_final.img"];
-
 			[mxSft gauss2DLP:0.1];
 			[mxSft saveAsKOImage:@"imgMxSft_f.img"];
 			tmp_img = [imgs selectSftF:mxSft];
-			[tmp_img saveAsKOImage:@"imgs_final_F.img"];
+			[tmp_img saveAsKOImage:@"imgs_final.img"];
 			[tmp_img swapLoop:[tmp_img yLoop] withLoop:[tmp_img zLoop]];
 			[tmp_img saveAsKOImage:@"imgs_final_ax.img"];
 		} // === focused rigid-body correction === 

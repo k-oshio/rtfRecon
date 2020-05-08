@@ -50,15 +50,15 @@ RDBM header version = 11.00
 
 // patients
 NSString        *base = @"/Users/oshio/epic/rtf3_data/clinical";
-//NSString        *name = @"akasaka"; int   pNum = 10240; BOOL zFlip = NO; // rad pcorr ?  pw has large phase
+//NSString        *name = @"akasaka"; int   pNum = 10240; BOOL zFlip = NO; // x rad pcorr ?  pw has large phase
 //NSString        *name = @"akita"; int   pNum = 25088; BOOL zFlip = NO;   // x
-//NSString        *name = @"akiyama"; int   pNum = 24064; BOOL zFlip = NO;  // x
+//NSString        *name = @"akiyama"; int   pNum = 24064; BOOL zFlip = NO;  // ox
 //NSString        *name = @"anai"; int   pNum = 13312; BOOL zFlip = YES;    // x
-//NSString        *name = @"arimoto"; int   pNum = 8704; BOOL zFlip = NO;   //ok
-//NSString        *name = @"eno"; int   pNum = 12288; BOOL zFlip = NO;      // x
+//NSString        *name = @"arimoto"; int   pNum = 8704; BOOL zFlip = NO;   //o 
+NSString        *name = @"eno"; int   pNum = 12288; BOOL zFlip = NO;      // x
 //NSString        *name = @"funatogawa"; int   pNum = 8704; BOOL zFlip = NO; // x
 //NSString        *name = @"furuyama"; int   pNum = 41984; BOOL zFlip = NO;   // x
-NSString        *name = @"hatakeyama"; int   pNum = 49152; BOOL zFlip = YES;    // x
+//NSString        *name = @"hatakeyama"; int   pNum = 49152; BOOL zFlip = YES;    // ok
 //NSString        *name = @""; int   pNum = ; BOOL zFlip = NO;
 //NSString        *name = @""; int   pNum = ; BOOL zFlip = NO;
 //NSString        *name = @""; int   pNum = ; BOOL zFlip = NO;
@@ -87,7 +87,7 @@ main()
 TIMER_ST
     @autoreleasepool {
         
-    system("rm *.img");
+    system("rm *.img, img_*, IMG_*");
     system("rm sft*.txt");
 
 	// (1) === load raw data
@@ -155,6 +155,10 @@ TIMER_ST
     // sft est
         sft = [pw shiftFromK0];
         [sft saveAsKOImage:@"IMG_sft"];
+    if ([sft rmsVal] < 1.0) {
+        printf("rms < 1\n");
+        [sft multByConst:3.0];
+    }
 
     // correction
         imgs = [img stepCorrWithPW:pw gridder:grid sft:sft];

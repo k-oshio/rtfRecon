@@ -1287,10 +1287,15 @@ float toshibaRad(float th)
     
 // remove low freq along y
     [prj cosFilter:[prj yLoop] order:12 keepDC:YES]; // 4
-    
+
+// input
+    if (dbg) {
+        [prj saveAsKOImage:@"IMG_in"];
+    }
+
 // initial est
-    int mode = 3;
-    switch (mode) {
+    int init_mode = 2;
+    switch (init_mode) {
     case 0 :
         mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
         st = [RecImage imageWithImage:mv];  // 0
@@ -1300,7 +1305,7 @@ float toshibaRad(float th)
         mv = [st copy];
         break;
     case 2 :
-        st = [[prj avgForLoop:[prj yLoop]] multByConst:0.5];  // p avg
+        st = [[prj avgForLoop:[prj yLoop]] multByConst:0.9];  // p avg
         mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
         [mv subImage:st];
         break;
@@ -1310,25 +1315,24 @@ float toshibaRad(float th)
         break;
     }
 
-    // chk input
+    // initial
     if (dbg) {
-        path = [NSString stringWithFormat:@"IMG_prj.img"];
-        [prj saveAsKOImage:path];
-        dif = [prj copy];
-        est = [prj avgForLoop:[prj yLoop]];
-        [dif subImage:est];
-        path = [NSString stringWithFormat:@"IMG_prj_avg.img"];
-        [dif saveAsKOImage:path];
+        [st saveAsKOImage:@"IMG_st0"];
+        [mv saveAsKOImage:@"IMG_mv0"];
+        [prj subImage:st];
+        [prj saveAsKOImage:@"IMG_in_st"];
     }
 
 // === iteration ===
 	for (iter = 1; iter <= nIter; iter++) {
+        int lp_mode = 0;
+
 		est = [prj copy];
 		[est subImage:st];
+        
 		sft = [est corr1dWithRef:mv];	// unit:pixels
-
 		mx = [sft meanVal];
-		[sft addConst:-mx];
+		[sft addConst:-mx];             // zero-mean
 
         nsft = [sft copy];
 		[nsft negate];
@@ -1347,15 +1351,16 @@ float toshibaRad(float th)
             printf("%d %e\n", iter, err);
         }
 		mean = [dif avgForLoop:[dif yLoop]];
-		[st addImage:mean];
+	    [st addImage:mean]; // ok
 
 		mv = [prj copy];
 	 	[mv subImage:st];
 		mv = [mv correctShift1d:sft forLoop:[mv xLoop]];
 		mv = [mv avgForLoop:[mv yLoop]];
 
-		if (dbg && (iter == nIter)) {
-			ix = 1;
+	//    if (dbg && (iter == nIter)) {
+            if (dbg) {
+                ix = 1;
             path = [NSString stringWithFormat:@"IMG_sft%d.img", ix];
             [sft saveAsKOImage:path];
 			path = [NSString stringWithFormat:@"IMG_mv%d.img", ix];
@@ -1364,11 +1369,11 @@ float toshibaRad(float th)
 			[st saveAsKOImage:path];
 			path = [NSString stringWithFormat:@"IMG_dif%d.img", ix];
 			[dif saveAsKOImage:path];
-			path = [NSString stringWithFormat:@"IMG_ms%d.img", ix];
+			path = [NSString stringWithFormat:@"IMG_est%d.img", ix];
 			[est saveAsKOImage:path];
             dif = [est copy];
             [dif subImage:st];
-            path = [NSString stringWithFormat:@"IMG_ms_st%d.img", ix];
+            path = [NSString stringWithFormat:@"IMG_ms%d.img", ix];
             [dif saveAsKOImage:path];
 
             p = [sft data];
@@ -1492,7 +1497,7 @@ float toshibaRad(float th)
     // correlation
 	corr = [tmp1 xCorrelationWith:ref width:w triFilt:NO];
  [corr saveAsKOImage:@"IMG_corr"];   
-    [corr crop:[corr xLoop] to:16]; // 32
+    [corr crop:[corr xLoop] to:24]; // 32
     // peak detection -> sft
 	sft = [corr corrToSft1d:[corr xLoop]];
  [sft saveAsKOImage:@"IMG_sft"];   
@@ -1500,12 +1505,62 @@ float toshibaRad(float th)
 	return sft;
 }
 
+// move to RecImage.m when done
+float
+Rec_find_nearest_peak(float *p, int skip, int len)
+{
+    float       frac;
+    int         i, m1, m2, ix;
+    BOOL        incr;
+
+//    vDSP_maxvi(p, skip, mx, &ix, n);   // find max val with index
+    // find peak nearest to center
+    m1 = m2 = p[len/2 * skip];
+    incr = YES;
+    for (i = len/2; i < len; i++) {
+        ix = i * skip;
+        if (p[ix] > m1) {
+            m1 = p[ix];
+        } else {
+            if (incr) {
+                break;  // found m1
+            }
+            incr = NO;
+        }
+    }
+    for (i = len/2; i >= 0; i--) {
+        ix = i * skip;
+        if (p[ix] > m2) {
+            m2 = p[ix];
+        } else {
+            if (incr) {
+                break;  // found m1
+            }
+            incr = NO;
+        }
+    }
+    if (m1 - len/2 > len/2 - m2) {
+        ix = m1;
+    } else {
+        ix = m2;
+    }
+
+    if (ix <= 0 || ix >= len * skip) {
+        frac = 0;
+    } else {
+        frac = Rec_find_peak_frac(p + ix, skip, len);
+    }
+    return ix + frac;
+}
+
+
 - (RecImage *)corrToSft1d:(RecLoop *)lp
 {
     void    (^proc)(float *q, float *p, int len, int skip);
  
     proc = ^void(float *q, float *p, int len, int skip) {
-		*q = Rec_find_peak(p, skip, len);
+    //    *q = Rec_find_peak(p, skip, len);
+        *q = Rec_find_nearest_peak(p, skip, len);
     };
 	return [self applyProjProc:proc forLoop:lp];
 }

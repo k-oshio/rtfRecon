@@ -134,6 +134,8 @@ RecImage *	Rec_goldenAngleSort(RecImage *gaTab);
 RecImage *	Rec_RadialTab(RecImage *tab);
 RecImage *	Rec_load_edge(NSString *path);	// remove when below is done
 
+float       Rec_find_nearest_peak(float *p, int skip, int len);
+
 void		qsort_b_float(float *p, int n, int order);	// order 1:acsending, -1:descending
 void        block_sort(RecImage *raw);	// not used anymore
 

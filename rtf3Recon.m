@@ -45,25 +45,36 @@ RDBM header version = 11.00
 #import <RecKit/timer_macros.h>
 
 // volunteers
-//NSString        *base = @"/Users/oshio/epic/rtf3_data/volunteer";
-//NSString        *name = @"okabe2-1"; int   pNum = 23040; BOOL zFlip = NO; //YES;
+NSString *base = @"/Users/oshio/epic/rtf3_data/volunteer";
+//NSString *name = @"okabe2-1";     int pNum = 23040; BOOL zFlip = NO; // C
+//NSString *name = @"okuda-nitrol"; int pNum = 14336; BOOL zFlip = NO; // C
 
 // patients
-NSString        *base = @"/Users/oshio/epic/rtf3_data/clinical";
-//NSString        *name = @"akasaka"; int   pNum = 10240; BOOL zFlip = NO; // x rad pcorr ?  pw has large phase
-//NSString        *name = @"akita"; int   pNum = 25088; BOOL zFlip = NO;   // x
-//NSString        *name = @"akiyama"; int   pNum = 24064; BOOL zFlip = NO;  // ox
-NSString        *name = @"anai"; int   pNum = 13312; BOOL zFlip = YES;    // x
-//NSString        *name = @"arimoto"; int   pNum = 8704; BOOL zFlip = NO;   //o 
-//NSString        *name = @"eno"; int   pNum = 12288; BOOL zFlip = NO;      // o
-//NSString        *name = @"funatogawa"; int   pNum = 8704; BOOL zFlip = NO; // x
-//NSString        *name = @"furuyama"; int   pNum = 41984; BOOL zFlip = NO;   // x
-//NSString        *name = @"hatakeyama"; int   pNum = 49152; BOOL zFlip = YES;    // ok
-//NSString        *name = @""; int   pNum = ; BOOL zFlip = NO;
-//NSString        *name = @""; int   pNum = ; BOOL zFlip = NO;
-//NSString        *name = @""; int   pNum = ; BOOL zFlip = NO;
-//NSString        *name = @""; int   pNum = ; BOOL zFlip = NO;
-//NSString        *name = @""; int   pNum = ; BOOL zFlip = NO;
+//NSString *base = @"/Users/oshio/epic/rtf3_data/clinical";
+//NSString *name = @"akasaka";      int pNum = 10240; BOOL zFlip = NO;      // x rad pcorr ?  pw has large phase
+//NSString *name = @"akita";        int pNum = 25088; BOOL zFlip = NO;      // x
+//NSString *name = @"akiyama";      int pNum = 24064; BOOL zFlip = NO;      // ox
+//NSString *name = @"anai";         int pNum = 13312; BOOL zFlip = YES;     // o
+//NSString *name = @"arimoto";      int pNum =  8704; BOOL zFlip = NO;      // o 
+//NSString *name = @"eno";          int pNum = 12288; BOOL zFlip = NO;      // o
+//NSString *name = @"funatogawa";   int pNum =  8704; BOOL zFlip = NO;      // ox
+//NSString *name = @"furuyama";     int pNum = 41984; BOOL zFlip = NO;      // ox
+//NSString *name = @"hatakeyama";   int pNum = 49152; BOOL zFlip = YES;     // o -> x -> chk
+//NSString *name = @"hayashi";      int pNum = 40960; BOOL zFlip = NO;      // x
+//NSString *name = @"ikeda";        int pNum = 13824; BOOL zFlip = YES;     //  x
+//NSString *name = @"ishii";        int pNum = 19456; BOOL zFlip = NO;      // ox
+//NSString *name = @"itou";         int pNum = 34304; BOOL zFlip = YES;     // x
+//NSString *name = @"kanai";        int pNum = 41984; BOOL zFlip = NO;      // xxxx
+//NSString *name = @"kariya";       int pNum =  3584; BOOL zFlip = NO;      // A
+//NSString *name = @"kawano";       int pNum = 18944; BOOL zFlip = YES;     // A
+//NSString *name = @"kimura";       int pNum = 28672; BOOL zFlip = YES;     // C
+//NSString *name = @"kiura";        int pNum = 14336; BOOL zFlip = NO;      // A
+//NSString *name = @"kobayashi";    int pNum = 17920; BOOL zFlip = NO;      // C
+//NSString *name = @"";             int pNum = ; BOOL zFlip = NO;
+//NSString *name = @"";             int pNum = ; BOOL zFlip = NO;
+//NSString *name = @"";             int pNum = ; BOOL zFlip = NO;
+//NSString *name = @"";             int pNum = ; BOOL zFlip = NO;
+//NSString *name = @"";             int pNum = ; BOOL zFlip = NO;
 
 int
 //main(int ac, char *av[])

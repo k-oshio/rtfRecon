@@ -1491,16 +1491,39 @@ float toshibaRad(float th)
 	RecImage	*sft, *corr;
 	RecImage	*tmp1, *ref2;
 	float		w = 0.2;	// 0.05
+    int         i, mx_i, len;
+    float       *p, mx;
 
 	tmp1 = [self copy];
 	ref2 = [ref copy];
     // correlation
 	corr = [tmp1 xCorrelationWith:ref width:w triFilt:NO];
- [corr saveAsKOImage:@"IMG_corr"];   
-    [corr crop:[corr xLoop] to:24]; // 32
+    [corr saveAsKOImage:@"IMG_corr"];
+
+    tmp1 = [corr avgForLoop:[corr yLoop]];
+[tmp1 saveAsKOImage:@"IMG_corr_proj"];
+    p = [tmp1 data];
+    mx = 0;
+    len = [corr xDim];
+    for (i = 0; i < len; i++) {
+        if (p[i] > mx) {
+            mx = p[i];
+            mx_i = i;
+        }
+    }
+printf("max at %d (%f)\n", mx_i, mx);
+    [corr shift1d:[corr xLoop] by:mx_i - len/2];
+//    [corr saveAsKOImage:@"IMG_corr_sft"];
+
+    [corr crop:[corr xLoop] to:20]; // 32
+    [corr saveAsKOImage:@"IMG_corr_crop"];   
+
     // peak detection -> sft
 	sft = [corr corrToSft1d:[corr xLoop]];
- [sft saveAsKOImage:@"IMG_sft"];   
+    mx = [sft meanVal];
+    [sft addConst:-mx];
+ [sft saveShift:1];
+ //[sft saveAsKOImage:@"IMG_sft"];   
 
 	return sft;
 }
@@ -1510,40 +1533,78 @@ float
 Rec_find_nearest_peak(float *p, int skip, int len)
 {
     float       frac;
-    int         i, m1, m2, ix;
+    int         i, m1, m2, ix, ct = len/2;
+    vDSP_Length vix;
+    float       mx1, mx2;
     BOOL        incr;
 
-//    vDSP_maxvi(p, skip, mx, &ix, n);   // find max val with index
+vDSP_maxvi(p, skip, &mx1, &vix, len);   // find max val with index
+printf("vDSP: mx = %d %4.3f\n", vix, mx1);
+
+for (i = ct; i < len; i++) {
+//    printf("%3.1f ", p[i * skip]);
+}
+//printf("\n");
+for (i = ct; i >= 0; i--) {
+//    printf("%3.1f ", p[i * skip]);
+}
+//printf("\n");
     // find peak nearest to center
-    m1 = m2 = p[len/2 * skip];
-    incr = YES;
-    for (i = len/2; i < len; i++) {
-        ix = i * skip;
-        if (p[ix] > m1) {
-            m1 = p[ix];
-        } else {
-            if (incr) {
-                break;  // found m1
-            }
-            incr = NO;
-        }
-    }
-    for (i = len/2; i >= 0; i--) {
-        ix = i * skip;
-        if (p[ix] > m2) {
-            m2 = p[ix];
-        } else {
-            if (incr) {
-                break;  // found m1
-            }
-            incr = NO;
-        }
-    }
-    if (m1 - len/2 > len/2 - m2) {
-        ix = m1;
+    mx1 = mx2 = p[ct * skip];
+    m1 = m2 = ct;
+    if (p[ct * skip] < p[ct * skip + skip]) {
+        incr = YES;
     } else {
-        ix = m2;
+        incr = NO;
     }
+    for (i = ct+1; i < len; i++) {
+        ix = i * skip;
+        if (p[ix] > mx1) {
+            mx1 = p[ix];
+            incr = YES;
+        } else {
+            if (incr) {
+                m1 = i - 1;
+                break;  // found m1
+            }
+            incr = NO;
+        }
+    }
+    if (p[ct * skip] < p[ct * skip - skip]) {
+        incr = YES;
+    } else {
+        incr = NO;
+    }
+    for (i = ct - 1; i >= 0; i--) {
+        ix = i * skip;
+        if (p[ix] > mx2) {
+            mx2 = p[ix];
+            incr = YES;
+        } else {
+            if (incr) {
+                m2 = i + 1;
+                break;  // found m1
+            }
+            incr = NO;
+        }
+    }
+//printf("m1: %d %4.3f,  m2: %d %4.3f\n", m1, mx1, m2, mx2);
+    if (mx1 > mx2) {
+        ix = m1*skip;
+    } else {
+        ix = m2*skip;
+    }
+printf("nearest ix = %d\n", ix);
+
+//mx1 = p[0];
+//for (i = 0; i < len; i++) {
+//    ix = i * skip;
+//    if (p[ix] > mx1) {
+//        mx1 = p[ix];
+//        m1 = i;
+//    }
+//}
+//printf("sequential mx = %4.3f, at %d\n", mx1, m1);
 
     if (ix <= 0 || ix >= len * skip) {
         frac = 0;
@@ -1633,9 +1694,9 @@ Rec_find_nearest_peak(float *p, int skip, int len)
 }
 
 // text dump in pixels
-- (void)saveShift:(int)ix xDim:(int)xDim yDim:(int)yDim
+- (void)saveShift:(int)ix
 {
-	float	**p, **q;
+	float	*p;
     int     i, j, len;
     int     nPts;
     FILE    *fp;
@@ -1644,26 +1705,12 @@ Rec_find_nearest_peak(float *p, int skip, int len)
     nPts = [self pixSize]/2;
     sprintf(path, "sft%02d.txt", ix);
     fp = fopen(path, "w");
-	p = (float **)malloc(sizeof(float *) * nPts);
-	q = (float **)malloc(sizeof(float *) * nPts);
-
-    p[0] = [self data];
-    q[0] = p[0] + dataLength;
-    for (j = 1; j < nPts; j++) {
-        p[j] = p[0] + dataLength * 2 * j;
-        q[j] = q[0] + dataLength * 2 * j;
-    }
+	p = [self data];
     len = [self xDim];
     for (i = 0; i < len; i++) {
-        fprintf(fp, "%d", i);
-        for (j = 0; j < nPts; j++) {
-			fprintf(fp, " %f %f", p[j][i], q[j][i]);	// pixels
-        }
-        fprintf(fp, "\n");
+        fprintf(fp, "%d %f\n", i, p[i]);
     }
     fclose(fp);
-	free(p);
-	free(q);
 }
 
 - (void)remove2RR:(RecImage *)pw thres:(float)th	// frac of max

@@ -113,7 +113,7 @@
 // ==== testing... ======
 
 // debug
-- (void)saveShift:(int)ix xDim:(int)xDim yDim:(int)yDim;
+- (void)saveShift:(int)ix;
 - (void)dumpShift;
 - (void)saveComb:(RecLoop *)ch as:(NSString *)path;
 - (void)printDefAt:(RecVector)v;

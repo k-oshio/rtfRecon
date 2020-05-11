@@ -45,25 +45,25 @@ RDBM header version = 11.00
 #import <RecKit/timer_macros.h>
 
 // volunteers
-NSString *base = @"/Users/oshio/epic/rtf3_data/volunteer";
-//NSString *name = @"okabe2-1";     int pNum = 23040; BOOL zFlip = NO; // C
-//NSString *name = @"okuda-nitrol"; int pNum = 14336; BOOL zFlip = NO; // C
+//NSString *base = @"/Users/oshio/epic/rtf3_data/volunteer";
+//NSString *name = @"okabe2-1";     int pNum = 23040; BOOL zFlip = NO;    // 0 C (view 71, 99)
+//NSString *name = @"okuda-nitrol"; int pNum = 14336; BOOL zFlip = NO;  // 0 A, 1 o, 2 C, 3 A
 
 // patients
-//NSString *base = @"/Users/oshio/epic/rtf3_data/clinical";
-//NSString *name = @"akasaka";      int pNum = 10240; BOOL zFlip = NO;      // x rad pcorr ?  pw has large phase
-//NSString *name = @"akita";        int pNum = 25088; BOOL zFlip = NO;      // x
-//NSString *name = @"akiyama";      int pNum = 24064; BOOL zFlip = NO;      // ox
-//NSString *name = @"anai";         int pNum = 13312; BOOL zFlip = YES;     // o
-//NSString *name = @"arimoto";      int pNum =  8704; BOOL zFlip = NO;      // o 
-//NSString *name = @"eno";          int pNum = 12288; BOOL zFlip = NO;      // o
-//NSString *name = @"funatogawa";   int pNum =  8704; BOOL zFlip = NO;      // ox
-//NSString *name = @"furuyama";     int pNum = 41984; BOOL zFlip = NO;      // ox
-//NSString *name = @"hatakeyama";   int pNum = 49152; BOOL zFlip = YES;     // o -> x -> chk
-//NSString *name = @"hayashi";      int pNum = 40960; BOOL zFlip = NO;      // x
-//NSString *name = @"ikeda";        int pNum = 13824; BOOL zFlip = YES;     //  x
-//NSString *name = @"ishii";        int pNum = 19456; BOOL zFlip = NO;      // ox
-//NSString *name = @"itou";         int pNum = 34304; BOOL zFlip = YES;     // x
+NSString *base = @"/Users/oshio/epic/rtf3_data/clinical";
+//NSString *name = @"akasaka";      int pNum = 10240; BOOL zFlip = NO;  // 0o rad pcorr ?  pw has large phase
+//NSString *name = @"akita";        int pNum = 25088; BOOL zFlip = NO;  // 0A, 1C, 2C, 3A, 
+//NSString *name = @"akiyama";      int pNum = 24064; BOOL zFlip = NO;  // 0A, 1C, 2A 3A
+NSString *name = @"anai";         int pNum = 13312; BOOL zFlip = YES; // 0 A, 1 C, 2 o, 3 A
+//NSString *name = @"arimoto";      int pNum =  8704; BOOL zFlip = NO;  // o 
+//NSString *name = @"eno";          int pNum = 12288; BOOL zFlip = NO;  // o
+//NSString *name = @"funatogawa";   int pNum =  8704; BOOL zFlip = NO;  // o (init = 0)
+//NSString *name = @"furuyama";     int pNum = 41984; BOOL zFlip = NO;  // ox
+//NSString *name = @"hatakeyama";   int pNum = 49152; BOOL zFlip = YES; // o -> x -> chk
+//NSString *name = @"hayashi";      int pNum = 40960; BOOL zFlip = NO;  // x
+//NSString *name = @"ikeda";        int pNum = 13824; BOOL zFlip = YES; //  x
+//NSString *name = @"ishii";        int pNum = 19456; BOOL zFlip = NO;  // ox
+//NSString *name = @"itou";         int pNum = 34304; BOOL zFlip = YES; // x
 //NSString *name = @"kanai";        int pNum = 41984; BOOL zFlip = NO;      // xxxx
 //NSString *name = @"kariya";       int pNum =  3584; BOOL zFlip = NO;      // A
 //NSString *name = @"kawano";       int pNum = 18944; BOOL zFlip = YES;     // A
@@ -98,7 +98,7 @@ main()
 TIMER_ST
     @autoreleasepool {
         
-    system("rm *.img, img_*, IMG_*");
+    system("rm *.img, img*, IMG_*. pw.*");
     system("rm sft*.txt");
 
         if (0) {

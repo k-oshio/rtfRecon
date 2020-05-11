@@ -1293,7 +1293,7 @@ float toshibaRad(float th)
         [prj saveAsKOImage:@"IMG_in"];
     }
 
-// initial est
+// 0) initial est
     int init_mode = 2;
     switch (init_mode) {
     case 0 :
@@ -1314,8 +1314,6 @@ float toshibaRad(float th)
         mv = [[prj subImage:st] avgForLoop:[prj yLoop]];
         break;
     }
-
-    // initial
     if (dbg) {
         [st saveAsKOImage:@"IMG_st0"];
         [mv saveAsKOImage:@"IMG_mv0"];
@@ -1327,25 +1325,27 @@ float toshibaRad(float th)
 	for (iter = 1; iter <= nIter; iter++) {
         int lp_mode = 0;
 
+        // 1) shift(mv)
 		est = [prj copy];
-		[est subImage:st];
-        
+		[est subImage:st];              // ms
+
+        // 2) shift
 		sft = [est corr1dWithRef:mv];	// unit:pixels
 		mx = [sft meanVal];
 		[sft addConst:-mx];             // zero-mean
-
         nsft = [sft copy];
 		[nsft negate];
-		
+
+        // 3) ms
 		[est clear];
 		[est copyImage:mv];
 		est = [est correctShift1d:nsft forLoop:[mv xLoop]]; // pixels
 
+        // 4) diff
 		[est addImage:st];
 		dif = [prj copy];
 		[dif subImage:est];
 		[dif fTriWin1DforLoop:[dif xLoop]];
-
 		err = [dif rmsVal];
         if (dbg) {
             printf("%d %e\n", iter, err);
@@ -1354,7 +1354,7 @@ float toshibaRad(float th)
 	    [st addImage:mean]; // ok
 
 		mv = [prj copy];
-	 	[mv subImage:st];
+        [mv subImage:st];
 		mv = [mv correctShift1d:sft forLoop:[mv xLoop]];
 		mv = [mv avgForLoop:[mv yLoop]];
 
@@ -1375,11 +1375,8 @@ float toshibaRad(float th)
             [dif subImage:st];
             path = [NSString stringWithFormat:@"IMG_ms%d.img", ix];
             [dif saveAsKOImage:path];
-
-            p = [sft data];
-            for (i = 0; i < [sft xDim]; i++) {
-                printf("%d %f\n", i, p[i]);
-            }
+            [sft saveShift:1];
+            printf("shift rms = %4.3f\n", [sft rmsVal]);
 		}
 	}
 
@@ -1522,8 +1519,6 @@ printf("max at %d (%f)\n", mx_i, mx);
 	sft = [corr corrToSft1d:[corr xLoop]];
     mx = [sft meanVal];
     [sft addConst:-mx];
- [sft saveShift:1];
- //[sft saveAsKOImage:@"IMG_sft"];   
 
 	return sft;
 }
@@ -1538,17 +1533,9 @@ Rec_find_nearest_peak(float *p, int skip, int len)
     float       mx1, mx2;
     BOOL        incr;
 
-vDSP_maxvi(p, skip, &mx1, &vix, len);   // find max val with index
-printf("vDSP: mx = %d %4.3f\n", vix, mx1);
+//vDSP_maxvi(p, skip, &mx1, &vix, len);   // find max val with index
+//printf("vDSP: mx = %d %4.3f\n", vix, mx1);
 
-for (i = ct; i < len; i++) {
-//    printf("%3.1f ", p[i * skip]);
-}
-//printf("\n");
-for (i = ct; i >= 0; i--) {
-//    printf("%3.1f ", p[i * skip]);
-}
-//printf("\n");
     // find peak nearest to center
     mx1 = mx2 = p[ct * skip];
     m1 = m2 = ct;
@@ -1594,7 +1581,7 @@ for (i = ct; i >= 0; i--) {
     } else {
         ix = m2*skip;
     }
-printf("nearest ix = %d\n", ix);
+//printf("nearest ix = %d\n", ix);
 
 //mx1 = p[0];
 //for (i = 0; i < len; i++) {

@@ -101,7 +101,7 @@ TIMER_ST
     system("rm *.img, img*, IMG_*. pw.*");
     system("rm sft*.txt");
 
-        if (0) {
+        if (1) {
             pw = [RecImage imageFromFile:@"pw_sav" relativePath:YES];
             sft = [pw shiftFromK0];
             [sft saveAsKOImage:@"IMG_sft"];

@@ -1294,26 +1294,35 @@ float toshibaRad(float th)
     }
 
 // 0) initial est
-    int init_mode = 2;
-    switch (init_mode) {
-    case 0 :
-        mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
-        st = [RecImage imageWithImage:mv];  // 0
-        break;
-    case 1 :
-        st = [[prj avgForLoop:[prj yLoop]] multByConst:0.5];  // p/2
-        mv = [st copy];
-        break;
-    case 2 :
-        st = [[prj avgForLoop:[prj yLoop]] multByConst:0.9];  // p avg
-        mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
-        [mv subImage:st];
-        break;
-    case 3 :
-        st = [prj avgForLoop:[prj yLoop]];  // p avg
-        mv = [[prj subImage:st] avgForLoop:[prj yLoop]];
-        break;
-    }
+// st = [prj avg] x frac
+// mv = avg(prj - st)
+
+float	frac = 0.9;
+st = [[prj avgForLoop:[prj yLoop]] multByConst:frac];
+//mv = [[prj subImage:st] sliceAtIndex:0 forLoop:[prj yLoop]];
+mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
+[mv subImage:st];
+
+//    int init_mode = 2;
+//    switch (init_mode) {
+//    case 0 :
+//        mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
+//        st = [RecImage imageWithImage:mv];  // 0
+//        break;
+//    case 1 :
+//        st = [[prj avgForLoop:[prj yLoop]] multByConst:0.5];  // p/2
+//        mv = [st copy];
+//        break;
+//    case 2 :
+//        st = [[prj avgForLoop:[prj yLoop]] multByConst:0.9];  // p avg
+//        mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
+//        [mv subImage:st];
+//        break;
+//    case 3 :
+//        st = [prj avgForLoop:[prj yLoop]];  // p avg
+//        mv = [[prj subImage:st] avgForLoop:[prj yLoop]];
+//        break;
+//    }
     if (dbg) {
         [st saveAsKOImage:@"IMG_st0"];
         [mv saveAsKOImage:@"IMG_mv0"];

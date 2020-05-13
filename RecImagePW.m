@@ -1241,6 +1241,7 @@ float toshibaRad(float th)
 	RecImage	*st, *mv, *sft, *nsft;		// stationary[xDim], moving[xDim], shift[yDim]
 	RecImage	*est, *dif;
 	int			i, j, ix, iter, nIter = 20; //20;
+    float       st_frac;                    // initial fraction of stationary part
 	int			xDim, yDim;
 	float		*m, *p;
 	float		err, mx;
@@ -1297,32 +1298,12 @@ float toshibaRad(float th)
 // st = [prj avg] x frac
 // mv = avg(prj - st)
 
-float	frac = 0.9;
-st = [[prj avgForLoop:[prj yLoop]] multByConst:frac];
-//mv = [[prj subImage:st] sliceAtIndex:0 forLoop:[prj yLoop]];
+st_frac = 0.7;
+st = [[prj avgForLoop:[prj yLoop]] multByConst:st_frac];
+//mv = [[prj subImage:st] sliceAtIndex:0 forLoop:[prj yLoop]];  // subImage changes self !!!
 mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
 [mv subImage:st];
 
-//    int init_mode = 2;
-//    switch (init_mode) {
-//    case 0 :
-//        mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
-//        st = [RecImage imageWithImage:mv];  // 0
-//        break;
-//    case 1 :
-//        st = [[prj avgForLoop:[prj yLoop]] multByConst:0.5];  // p/2
-//        mv = [st copy];
-//        break;
-//    case 2 :
-//        st = [[prj avgForLoop:[prj yLoop]] multByConst:0.9];  // p avg
-//        mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
-//        [mv subImage:st];
-//        break;
-//    case 3 :
-//        st = [prj avgForLoop:[prj yLoop]];  // p avg
-//        mv = [[prj subImage:st] avgForLoop:[prj yLoop]];
-//        break;
-//    }
     if (dbg) {
         [st saveAsKOImage:@"IMG_st0"];
         [mv saveAsKOImage:@"IMG_mv0"];
@@ -1332,8 +1313,7 @@ mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
 
 // === iteration ===
 	for (iter = 1; iter <= nIter; iter++) {
-        int lp_mode = 0;
-
+ 
         // 1) shift(mv)
 		est = [prj copy];
 		[est subImage:st];              // ms
@@ -1368,22 +1348,16 @@ mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
 		mv = [mv avgForLoop:[mv yLoop]];
 
 	//    if (dbg && (iter == nIter)) {
-            if (dbg) {
-                ix = 1;
-            path = [NSString stringWithFormat:@"IMG_sft%d.img", ix];
-            [sft saveAsKOImage:path];
-			path = [NSString stringWithFormat:@"IMG_mv%d.img", ix];
-			[mv saveAsKOImage:path];
-			path = [NSString stringWithFormat:@"IMG_st%d.img", ix];
-			[st saveAsKOImage:path];
-			path = [NSString stringWithFormat:@"IMG_dif%d.img", ix];
-			[dif saveAsKOImage:path];
-			path = [NSString stringWithFormat:@"IMG_est%d.img", ix];
-			[est saveAsKOImage:path];
-            dif = [est copy];
-            [dif subImage:st];
-            path = [NSString stringWithFormat:@"IMG_ms%d.img", ix];
-            [dif saveAsKOImage:path];
+        if (dbg) {
+            RecImage    *tmp_img;
+            [sft saveAsKOImage:@"IMG_sft01.img"];
+			[mv saveAsKOImage:@"IMG_mv01.img"];
+			[st saveAsKOImage:@"IMG_st01.img"];
+			[dif saveAsKOImage:@"IMG_dif01.img"];
+			[est saveAsKOImage:@"IMG_est01.img"];
+            tmp_img = [est copy];
+            [tmp_img subImage:st];
+            [tmp_img saveAsKOImage:@"IMG_ms01.img"];
             [sft saveShift:1];
             printf("shift rms = %4.3f\n", [sft rmsVal]);
 		}
@@ -1506,23 +1480,24 @@ mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
 	corr = [tmp1 xCorrelationWith:ref width:w triFilt:NO];
     [corr saveAsKOImage:@"IMG_corr"];
 
-    tmp1 = [corr avgForLoop:[corr yLoop]];
-[tmp1 saveAsKOImage:@"IMG_corr_proj"];
-    p = [tmp1 data];
-    mx = 0;
-    len = [corr xDim];
-    for (i = 0; i < len; i++) {
-        if (p[i] > mx) {
-            mx = p[i];
-            mx_i = i;
-        }
-    }
-printf("max at %d (%f)\n", mx_i, mx);
-    [corr shift1d:[corr xLoop] by:mx_i - len/2];
+// ### centering peak and cropping turned off (5-13-2020)
+//    tmp1 = [corr avgForLoop:[corr yLoop]];
+//[tmp1 saveAsKOImage:@"IMG_corr_proj"];
+//    p = [tmp1 data];
+//    mx = 0;
+//    len = [corr xDim];
+//    for (i = 0; i < len; i++) {
+//        if (p[i] > mx) {
+//            mx = p[i];
+//            mx_i = i;
+//        }
+//    }
+//printf("max at %d (%f)\n", mx_i, mx);
+//    [corr shift1d:[corr xLoop] by:mx_i - len/2];
 //    [corr saveAsKOImage:@"IMG_corr_sft"];
-
-    [corr crop:[corr xLoop] to:20]; // 32
-    [corr saveAsKOImage:@"IMG_corr_crop"];   
+//
+//    [corr crop:[corr xLoop] to:20]; // 32
+//    [corr saveAsKOImage:@"IMG_corr_crop"];   
 
     // peak detection -> sft
 	sft = [corr corrToSft1d:[corr xLoop]];

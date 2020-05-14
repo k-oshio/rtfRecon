@@ -1236,12 +1236,11 @@ float toshibaRad(float th)
 // output unit is pixels
 - (RecImage *)shiftFromK0
 {
-	RecImage	*prj;
+	RecImage	*prj, *dif;
 	RecImage	*mean;
-	RecImage	*st, *mv, *sft, *nsft;		// stationary[xDim], moving[xDim], shift[yDim]
-	RecImage	*est, *dif;
-	int			i, j, ix, iter, nIter = 20; //20;
-    float       st_frac;                    // initial fraction of stationary part
+    RecImage    *sft;
+	int			i, j, ix, slc;
+    float       st_frac, min_frac;                    // initial fraction of stationary part
 	int			xDim, yDim;
 	float		*m, *p;
 	float		err, mx;
@@ -1294,15 +1293,54 @@ float toshibaRad(float th)
         [prj saveAsKOImage:@"IMG_in"];
     }
 
+// test with fraction of stationary part
+    mx = 1.0;
+    min_frac = st_frac;
+    for (i = 0; i < 8; i++) {
+        st_frac = (float)i / 10;
+        sft = [prj estShiftWithFrac:st_frac slice:0 nIter:20 err:&err dbg:NO];
+printf("%d %f\n", i, err);
+        if (err < mx) {
+            mx = err;
+            min_frac = st_frac;
+        }
+    }
+
+// test with different ref slice
+    mx = 1.0;
+    slc = 0;
+    for (i = 0; i < 10; i++) {
+        sft = [prj estShiftWithFrac:min_frac slice:i nIter:20 err:&err dbg:NO];
+        printf("%d %f\n", i, err);
+        if (err < mx) {
+            mx = err;
+            slc = i;
+        }
+    }
+    printf("min = %f with frac = %f, slc = %d, sft rms = %f\n", mx, min_frac, slc, [sft rmsVal]);
+    sft = [prj estShiftWithFrac:min_frac slice:slc nIter:20 err:&err dbg:YES];
+    
+	return sft;
+}
+
+- (RecImage *)estShiftWithFrac:(float)fr slice:(int)slc nIter:(int)nIter err:(float *)err dbg:(BOOL)dbg   // innter loop of above
+{
+    RecImage    *prj, *st, *mv, *sft, *nsft;        // stationary[xDim], moving[xDim], shift[yDim]
+    RecImage    *est, *dif;
+    int         i, j, ix, iter;
+    float       *m, *p;
+    float       mx, er;
+    // dbg
+    NSString    *path;
+
 // 0) initial est
 // st = [prj avg] x frac
 // mv = avg(prj - st)
 
-st_frac = 0.7;
-st = [[prj avgForLoop:[prj yLoop]] multByConst:st_frac];
-//mv = [[prj subImage:st] sliceAtIndex:0 forLoop:[prj yLoop]];  // subImage changes self !!!
-mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
-[mv subImage:st];
+    prj = [self copy];
+    st = [[prj avgForLoop:[prj yLoop]] multByConst:fr];
+    mv = [self sliceAtIndex:slc forLoop:[prj yLoop]];
+    [mv subImage:st];
 
     if (dbg) {
         [st saveAsKOImage:@"IMG_st0"];
@@ -1312,60 +1350,58 @@ mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
     }
 
 // === iteration ===
-	for (iter = 1; iter <= nIter; iter++) {
- 
+    for (iter = 1; iter <= nIter; iter++) {
+
         // 1) shift(mv)
-		est = [prj copy];
-		[est subImage:st];              // ms
+        est = [prj copy];
+        [est subImage:st];              // ms
 
         // 2) shift
-		sft = [est corr1dWithRef:mv];	// unit:pixels
-		mx = [sft meanVal];
-		[sft addConst:-mx];             // zero-mean
+        sft = [est corr1dWithRef:mv];    // unit:pixels
+        mx = [sft meanVal];
+        [sft addConst:-mx];             // zero-mean
         nsft = [sft copy];
-		[nsft negate];
+        [nsft negate];
 
         // 3) ms
-		[est clear];
-		[est copyImage:mv];
-		est = [est correctShift1d:nsft forLoop:[mv xLoop]]; // pixels
+        [est clear];
+        [est copyImage:mv];
+        est = [est correctShift1d:nsft forLoop:[mv xLoop]]; // pixels
 
         // 4) diff
-		[est addImage:st];
-		dif = [prj copy];
-		[dif subImage:est];
-		[dif fTriWin1DforLoop:[dif xLoop]];
-		err = [dif rmsVal];
+        [est addImage:st];
+        dif = [prj copy];
+        [dif subImage:est];
+        [dif fTriWin1DforLoop:[dif xLoop]];
+        er = [dif rmsVal];
         if (dbg) {
-            printf("%d %e\n", iter, err);
+            printf("%d %e\n", iter, er);
         }
-		mean = [dif avgForLoop:[dif yLoop]];
-	    [st addImage:mean]; // ok
+        [st addImage: [dif avgForLoop:[dif yLoop]]]; // ok
 
-		mv = [prj copy];
+        mv = [prj copy];
         [mv subImage:st];
-		mv = [mv correctShift1d:sft forLoop:[mv xLoop]];
-		mv = [mv avgForLoop:[mv yLoop]];
+        mv = [mv correctShift1d:sft forLoop:[mv xLoop]];
+        mv = [mv avgForLoop:[mv yLoop]];
 
-	//    if (dbg && (iter == nIter)) {
+    //    if (dbg && (iter == nIter)) {
         if (dbg) {
             RecImage    *tmp_img;
             [sft saveAsKOImage:@"IMG_sft01.img"];
-			[mv saveAsKOImage:@"IMG_mv01.img"];
-			[st saveAsKOImage:@"IMG_st01.img"];
-			[dif saveAsKOImage:@"IMG_dif01.img"];
-			[est saveAsKOImage:@"IMG_est01.img"];
+            [mv saveAsKOImage:@"IMG_mv01.img"];
+            [st saveAsKOImage:@"IMG_st01.img"];
+            [dif saveAsKOImage:@"IMG_dif01.img"];
+            [est saveAsKOImage:@"IMG_est01.img"];
             tmp_img = [est copy];
             [tmp_img subImage:st];
             [tmp_img saveAsKOImage:@"IMG_ms01.img"];
             [sft saveShift:1];
-            printf("shift rms = %4.3f\n", [sft rmsVal]);
-		}
-	}
+        }
+    }
 
-	return sft;
+    *err = er;
+    return sft;
 }
-
 - (RecImage *)stepCorrWithPW:(RecImage *)pw gridder:(RecGridder *)grid sft:(RecImage *)sft // input(self) is img
 {
     RecImage        *img, *imgs, *mxSft;
@@ -1501,8 +1537,16 @@ mv = [prj sliceAtIndex:0 forLoop:[prj yLoop]];
 
     // peak detection -> sft
 	sft = [corr corrToSft1d:[corr xLoop]];
+ 
     mx = [sft meanVal];
     [sft addConst:-mx];
+
+    // remove outlier
+     p = [sft data];
+     for (i = 0; i < [sft xDim]; i++) {
+            if (fabs(p[i]) > 10) p[i] = 0;
+    }
+
 
 	return sft;
 }

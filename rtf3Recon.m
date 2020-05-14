@@ -46,19 +46,25 @@ RDBM header version = 11.00
 
 // volunteers
 //NSString *base = @"/Users/oshio/epic/rtf3_data/volunteer";
-//NSString *name = @"okabe2-1";     int pNum = 23040; BOOL zFlip = NO;    // 0 C (view 71, 99)
-//NSString *name = @"okuda-nitrol"; int pNum = 14336; BOOL zFlip = NO;  // 0 A, 1 o, 2 C, 3 A
+//NSString *name = @"belt-off"; int pNum = 34304; BOOL zFlip = YES;  // signal X
+//NSString *name = @"belt-on";  int pNum = 33792; BOOL zFlip = YES;  // signal X
+//NSString *name = @"hashimoto1"; int pNum = 35328; BOOL zFlip = YES;  // 0.6
+//NSString *name = @"hashimoto2"; int pNum = 36352; BOOL zFlip = YES;  // 0.0, 2
+//NSString *name = @"okabe2-1"; int pNum = 23040; BOOL zFlip = NO;    // 0.1, 0
+//NSString *name = @"okabe2-2"; int pNum = 23552; BOOL zFlip = NO;  // 0.5, 0
+//NSString *name = @"okabe2-3"; int pNum = 24064; BOOL zFlip = NO;  // 0.3, 9
+//NSString *name = @"okuda-nitrol"; int pNum = 14336; BOOL zFlip = NO;  // 0.2, 8
 
 // patients
 NSString *base = @"/Users/oshio/epic/rtf3_data/clinical";
-//NSString *name = @"akasaka";      int pNum = 10240; BOOL zFlip = NO;  // 0o rad pcorr ?  pw has large phase
-//NSString *name = @"akita";        int pNum = 25088; BOOL zFlip = NO;  // 0A, 1C, 2C, 3A, 
-//NSString *name = @"akiyama";      int pNum = 24064; BOOL zFlip = NO;  // 0A, 1C, 2A 3A
+//NSString *name = @"akasaka";      int pNum = 10240; BOOL zFlip = NO;  // 0.3, 5
+//NSString *name = @"akita";        int pNum = 25088; BOOL zFlip = NO;  // 0.6, 7 
+NSString *name = @"akiyama";      int pNum = 24064; BOOL zFlip = NO;  // 0.7, 5
 //NSString *name = @"anai";         int pNum = 13312; BOOL zFlip = YES; // 0 A, 1 C, 2 o, 3 A (scale 0.7)
 //NSString *name = @"arimoto";      int pNum =  8704; BOOL zFlip = NO;  // o (scale 0.8)
 //NSString *name = @"eno";          int pNum = 12288; BOOL zFlip = NO;  // o scale 0.7
 //NSString *name = @"funatogawa";   int pNum =  8704; BOOL zFlip = NO;  // o scale 0.1
-NSString *name = @"furuyama";     int pNum = 41984; BOOL zFlip = NO;  // ox
+//NSString *name = @"furuyama";     int pNum = 41984; BOOL zFlip = NO;  // ox
 //NSString *name = @"hatakeyama";   int pNum = 49152; BOOL zFlip = YES; // o -> x -> chk
 //NSString *name = @"hayashi";      int pNum = 40960; BOOL zFlip = NO;  // x
 //NSString *name = @"ikeda";        int pNum = 13824; BOOL zFlip = YES; //  x
@@ -101,8 +107,9 @@ TIMER_ST
     system("rm *.img, img*, IMG_*");
     system("rm sft*.txt");
 
-        if (1) {
-            pw = [RecImage imageFromFile:@"pw_sav" relativePath:YES];
+        if (0) {
+            path = [NSString stringWithFormat:@"%@/%@/pw_sav", base, name];
+            pw = [RecImage imageFromFile:path relativePath:NO];
             sft = [pw shiftFromK0];
             [sft saveAsKOImage:@"IMG_sft"];
             exit(0);
@@ -150,7 +157,10 @@ TIMER_ST
 		pw_c = [pw combinePWForLoop:ch withCoil:coil];
         [pw_c saveAsKOImage:@"pw_c.img"];
         [pw saveAsKOImage:@"pw.img"];
-        [pw saveToFile:@"pw_sav" relativePath:YES];
+
+        // save to original data location
+        path = [NSString stringWithFormat:@"%@/%@/pw_sav", base, name];
+        [pw saveToFile:path relativePath:NO];
    
         traj = [RecImage imageOfType:RECIMAGE_KTRAJ withLoops:pe, rdZF, nil];
 

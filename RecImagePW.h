@@ -54,6 +54,7 @@
 - (RecImage *)opticalFlow2dWithRef:(RecImage *)ref;
 - (RecImage *)opticalFlow3dWithRef:(RecImage *)ref;
 - (RecImage *)shiftFromK0;	// shift estimation from center-of-kspace view (POCS)
+- (RecImage *)estShiftWithFrac:(float)fr slice:(int)slc nIter:(int)nIter err:(float *)err dbg:(BOOL)dbg;   // innter loop of above
 - (RecImage *)stepCorrWithPW:(RecImage *)pw gridder:(RecGridder *)grid sft:(RecImage *)sft; // input(self) is img
 
 // correction
@@ -92,7 +93,7 @@
 - (RecImage *)selectSftF:(RecImage *)sftIx;
 - (void)scaleVector:(RecVector)v shift:(RecImage *)sft rotate:(RecImage *)tab;
 
-- (RecImage *)loadEdge:(NSString *)path;
+//- (RecImage *)loadEdge:(NSString *)path;
 
 // warp
 - (RecImage *)scaleMapToImage:(RecImage *)img;

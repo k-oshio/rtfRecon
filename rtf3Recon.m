@@ -59,23 +59,23 @@ RDBM header version = 11.00
 NSString *base = @"/Users/oshio/epic/rtf3_data/clinical";
 //NSString *name = @"akasaka";      int pNum = 10240; BOOL zFlip = NO;  // 0.3, 5
 //NSString *name = @"akita";        int pNum = 25088; BOOL zFlip = NO;  // 0.6, 7 
-NSString *name = @"akiyama";      int pNum = 24064; BOOL zFlip = NO;  // 0.7, 5
-//NSString *name = @"anai";         int pNum = 13312; BOOL zFlip = YES; // 0 A, 1 C, 2 o, 3 A (scale 0.7)
-//NSString *name = @"arimoto";      int pNum =  8704; BOOL zFlip = NO;  // o (scale 0.8)
-//NSString *name = @"eno";          int pNum = 12288; BOOL zFlip = NO;  // o scale 0.7
-//NSString *name = @"funatogawa";   int pNum =  8704; BOOL zFlip = NO;  // o scale 0.1
-//NSString *name = @"furuyama";     int pNum = 41984; BOOL zFlip = NO;  // ox
-//NSString *name = @"hatakeyama";   int pNum = 49152; BOOL zFlip = YES; // o -> x -> chk
-//NSString *name = @"hayashi";      int pNum = 40960; BOOL zFlip = NO;  // x
-//NSString *name = @"ikeda";        int pNum = 13824; BOOL zFlip = YES; //  x
-//NSString *name = @"ishii";        int pNum = 19456; BOOL zFlip = NO;  // ox
-//NSString *name = @"itou";         int pNum = 34304; BOOL zFlip = YES; // x
-//NSString *name = @"kanai";        int pNum = 41984; BOOL zFlip = NO;      // xxxx
-//NSString *name = @"kariya";       int pNum =  3584; BOOL zFlip = NO;      // A
-//NSString *name = @"kawano";       int pNum = 18944; BOOL zFlip = YES;     // A
-//NSString *name = @"kimura";       int pNum = 28672; BOOL zFlip = YES;     // C
-//NSString *name = @"kiura";        int pNum = 14336; BOOL zFlip = NO;      // A
-//NSString *name = @"kobayashi";    int pNum = 17920; BOOL zFlip = NO;      // C
+//NSString *name = @"akiyama";      int pNum = 24064; BOOL zFlip = NO;  // 0.7, 0
+//NSString *name = @"anai";         int pNum = 13312; BOOL zFlip = YES; // 0.8, 7
+//NSString *name = @"arimoto";      int pNum =  8704; BOOL zFlip = NO;  // 0.8, 3
+//NSString *name = @"eno";          int pNum = 12288; BOOL zFlip = NO;  // 0.8, 3
+//NSString *name = @"funatogawa";   int pNum =  8704; BOOL zFlip = NO;  // 0.6, 4
+//NSString *name = @"furuyama";     int pNum = 41984; BOOL zFlip = NO;  // 0.9, 6 ox
+//NSString *name = @"hatakeyama";   int pNum = 49152; BOOL zFlip = YES; // 0.4, 6
+//NSString *name = @"hayashi";      int pNum = 40960; BOOL zFlip = NO;  // 0.6, 0
+//NSString *name = @"ikeda";        int pNum = 13824; BOOL zFlip = YES; // 0.3. 2 -> minErr at 0.6
+//NSString *name = @"ishii";        int pNum = 19456; BOOL zFlip = NO;  // 0.8, 3
+//NSString *name = @"itou";         int pNum = 34304; BOOL zFlip = YES; // 0.9, 1
+//NSString *name = @"kanai";        int pNum = 41984; BOOL zFlip = NO;  // 0.8, 8
+//NSString *name = @"kariya";       int pNum =  3584; BOOL zFlip = NO;  // 0.9, 1
+//NSString *name = @"kawano";       int pNum = 18944; BOOL zFlip = YES; // 0.8, 2
+//NSString *name = @"kimura";       int pNum = 28672; BOOL zFlip = YES; // 0.8, 7
+//NSString *name = @"kiura";        int pNum = 14336; BOOL zFlip = NO;      // 0.9, 6 -> X
+NSString *name = @"kobayashi";    int pNum = 17920; BOOL zFlip = NO;      // 0.8, 9
 //NSString *name = @"";             int pNum = ; BOOL zFlip = NO;
 //NSString *name = @"";             int pNum = ; BOOL zFlip = NO;
 //NSString *name = @"";             int pNum = ; BOOL zFlip = NO;

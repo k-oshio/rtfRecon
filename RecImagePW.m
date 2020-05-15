@@ -1244,7 +1244,6 @@ float toshibaRad(float th)
 	int			xDim, yDim;
 	float		*m, *p;
 	float		err, mx;
-	NSString	*path;
 	BOOL		dbg = YES;
 
 // ============ make 2D input from PW ======
@@ -1293,31 +1292,41 @@ float toshibaRad(float th)
         [prj saveAsKOImage:@"IMG_in"];
     }
 
-// test with fraction of stationary part
+// 2D: test with fraction of stationary part & ref slice
     mx = 1.0;
+    slc = 0;
     min_frac = st_frac;
-    for (i = 0; i < 8; i++) {
-        st_frac = (float)i / 10;
-        sft = [prj estShiftWithFrac:st_frac slice:0 nIter:20 err:&err dbg:NO];
-printf("%d %f\n", i, err);
-        if (err < mx) {
-            mx = err;
-            min_frac = st_frac;
+    for (i = 0; i < 10; i++) {   // frac
+        printf("%d ", i);
+        for (j = 0; j < 10; j++) {   // ref slice
+            st_frac = (float)i / 10;
+            sft = [prj estShiftWithFrac:st_frac slice:j nIter:2 err:&err dbg:NO];
+    //printf("%d %f\n", i, err);
+            printf("%f ", err);
+            if (err < mx) {
+                mx = err;
+                min_frac = st_frac;
+                slc = j;
+            }
         }
+        printf("\n");
     }
 
 // test with different ref slice
-    mx = 1.0;
-    slc = 0;
-    for (i = 0; i < 10; i++) {
-        sft = [prj estShiftWithFrac:min_frac slice:i nIter:20 err:&err dbg:NO];
-        printf("%d %f\n", i, err);
-        if (err < mx) {
-            mx = err;
-            slc = i;
-        }
-    }
+//    mx = 1.0;
+//    slc = 0;
+//    for (i = 0; i < 10; i++) {
+//        sft = [prj estShiftWithFrac:min_frac slice:i nIter:20 err:&err dbg:YES];
+//        printf("%d %f\n", i, err);
+//        if (err < mx) {
+//            mx = err;
+//            slc = i;
+//        }
+//    }
+
+// min_frac = 0.3; slc = 4;
     printf("min = %f with frac = %f, slc = %d, sft rms = %f\n", mx, min_frac, slc, [sft rmsVal]);
+
     sft = [prj estShiftWithFrac:min_frac slice:slc nIter:20 err:&err dbg:YES];
     
 	return sft;
@@ -1331,7 +1340,7 @@ printf("%d %f\n", i, err);
     float       *m, *p;
     float       mx, er;
     // dbg
-    NSString    *path;
+//    NSString    *path;
 
 // 0) initial est
 // st = [prj avg] x frac
@@ -1372,8 +1381,9 @@ printf("%d %f\n", i, err);
         [est addImage:st];
         dif = [prj copy];
         [dif subImage:est];
-        [dif fTriWin1DforLoop:[dif xLoop]];
+     //   [dif fTriWin1DforLoop:[dif xLoop]];
         er = [dif rmsVal];
+        
         if (dbg) {
             printf("%d %e\n", iter, er);
         }
@@ -1560,9 +1570,6 @@ Rec_find_nearest_peak(float *p, int skip, int len)
     vDSP_Length vix;
     float       mx1, mx2;
     BOOL        incr;
-
-//vDSP_maxvi(p, skip, &mx1, &vix, len);   // find max val with index
-//printf("vDSP: mx = %d %4.3f\n", vix, mx1);
 
     // find peak nearest to center
     mx1 = mx2 = p[ct * skip];

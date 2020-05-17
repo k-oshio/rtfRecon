@@ -49,11 +49,14 @@ void	pc_roi();
 // IVCM (intra-voxel coherent motion)
 void	ivcm();
 
+// quantitative time-SLIP
+void    ts_1();
+
 int
 main()
 {
     @autoreleasepool {
-		rinkan_1();
+//		rinkan_1();
 //		rinkan_4();
 //		rinkan_5();
 //		mg_pca();
@@ -71,6 +74,7 @@ main()
 //		t2sim();
 //		calc_div();
 //		ivcm();
+        ts_1();
     }
 	return 0;
 }
@@ -1329,5 +1333,101 @@ path = [NSString stringWithFormat:@"%@/DWI2/IMG.reorder", base];
 	[img_p subImage:img_m];
 	path = [NSString stringWithFormat:@"%@/DWI2/IMG.sub", base];
 	[img_p saveAsKOImage:path];
+}
+
+// quantitative time-SLIP
+// started on 5-16-2020
+void    ts_1()
+{
+    NSString    *base = @"../toshiba_images/TS-nasu-1";
+    NSString    *path;
+    RecImage    *img1, *img2, *ref1, *ref2;
+    RecImage    *roi1, *roi2;
+    RecImage    *tmp;
+    int         i, j, n;
+    float       *p, sum;
+    BOOL        rot = YES;
+    BOOL        removeRef = YES;
+
+    system("rm IMG_*.*");
+
+    path = [NSString stringWithFormat:@"%@/5s/120.img", base];
+    img1 = [RecImage imageWithKOImage:path];
+    path = [NSString stringWithFormat:@"%@/5s/150.img", base];
+    img2 = [RecImage imageWithKOImage:path];
+    path = [NSString stringWithFormat:@"%@/5s/130.img", base];
+    ref1 = [RecImage imageWithKOImage:path];
+    path = [NSString stringWithFormat:@"%@/5s/140.img", base];
+    ref2 = [RecImage imageWithKOImage:path];
+    [ref2 removeSliceAtIndex:50 forLoop:[ref2 zLoop]];
+    [img2 copyLoopsOf:img1];
+    [ref1 copyLoopsOf:img1];
+    [ref2 copyLoopsOf:img1];
+
+    if (rot) {
+        img1 = [img1 rotByTheta:30.0 * M_PI / 180.0];
+        img2 = [img2 rotByTheta:30.0 * M_PI / 180.0];
+        ref1 = [ref1 rotByTheta:30.0 * M_PI / 180.0];
+        ref2 = [ref2 rotByTheta:30.0 * M_PI / 180.0];
+    }
+    if (removeRef) {
+        [img1 crop:[img1 zLoop] to:[img1 zDim]/2 - 1 startAt:1];
+        [img2 crop:[img2 zLoop] to:[img2 zDim]/2 - 1 startAt:1];
+    }
+    ref1 = [ref1 avgForLoop:[ref1 zLoop]];
+    ref2 = [ref2 avgForLoop:[ref2 zLoop]];
+
+// 4->3, pos
+    tmp = [img1 copy];
+    [tmp subImage:ref1];
+    [tmp saveAsKOImage:@"IMG_3p.img"];
+// 3-4, neg
+    tmp = [img1 copy];
+    [tmp subImage:ref2];
+    [tmp negate];
+    [tmp saveAsKOImage:@"IMG_4n.img"];
+
+// 3-4, pos
+    tmp = [img2 copy];
+    [tmp subImage:ref1];
+    [tmp saveAsKOImage:@"IMG_4p.img"];
+
+// 4-3, neg
+    tmp = [img2 copy];
+    [tmp subImage:ref2];
+    [tmp negate];
+    [tmp saveAsKOImage:@"IMG_3n.img"];
+
+// ROI
+    roi1 = [img1 copy];
+
+// scale (range) is wrong ... ???s
+printf("img1/roi1 %f %f\n", [img1 minVal], [roi1 minVal]);
+    [roi1 crop:[roi1 xLoop] to:28 startAt:203];
+    [roi1 crop:[roi1 yLoop] to:28 startAt:149];
+    [roi1 saveAsKOImage:@"IMG_roi1.img"];
+    roi2 = [img2 copy];
+    [roi2 crop:[roi2 xLoop] to:28 startAt:208];
+    [roi2 crop:[roi2 yLoop] to:28 startAt:181];
+    [roi2 saveAsKOImage:@"IMG_roi2.img"];
+
+    n = [roi1 xDim] * [roi1 yDim];
+    for (i = 0; i < [roi1 zDim]; i++) {
+        p = [roi1 data] + i * n;
+        sum = 0;
+        for (j = 0; j < n; j++) {
+            sum += p[j];
+        }
+        printf("%d %f\n", i, sum);
+    }
+    p = [roi2 data];
+    for (i = 0; i < [roi2 zDim]; i++) {
+        p = [roi2 data] + i * n;
+        sum = 0;
+        for (j = 0; j < n; j++) {
+            sum += p[j];
+        }
+        printf("%d %f\n", i, sum);
+    }
 }
 

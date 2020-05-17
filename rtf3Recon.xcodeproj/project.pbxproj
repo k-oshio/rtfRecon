@@ -43,6 +43,7 @@
 		B478BF321BBD26C0005E4846 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B4AC36E71BB6A33300732E41 /* Accelerate.framework */; };
 		B47987971B05EC120000B79E /* corrTest.m in Sources */ = {isa = PBXBuildFile; fileRef = B47987961B05EC120000B79E /* corrTest.m */; };
 		B479879A1B05EE3C0000B79E /* RecImagePW.m in Sources */ = {isa = PBXBuildFile; fileRef = B46976AC13430C260005A29C /* RecImagePW.m */; };
+		B4A3FF042471494A00018ABC /* RecImagePW.m in Sources */ = {isa = PBXBuildFile; fileRef = B46976AC13430C260005A29C /* RecImagePW.m */; };
 		B4AC36E61BB6A2C200732E41 /* rtf3Recon_t.m in Sources */ = {isa = PBXBuildFile; fileRef = B4AC36E51BB6A2C200732E41 /* rtf3Recon_t.m */; };
 		B4AC36E81BB6A33300732E41 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B4AC36E71BB6A33300732E41 /* Accelerate.framework */; };
 		B4AC36EA1BB6A34500732E41 /* OpenCL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B4AC36E91BB6A34500732E41 /* OpenCL.framework */; };
@@ -488,6 +489,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B45BCB442009EF2100668D24 /* CSF.m in Sources */,
+				B4A3FF042471494A00018ABC /* RecImagePW.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

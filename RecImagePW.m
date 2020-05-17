@@ -3013,6 +3013,7 @@ takeROI2d(RecImage *src, RecImage *dst, int xc, int yc, int slice)
     return 0;
 }
 
+// ref is single slice by definition
 RecImage *
 makeSubImage2(RecImage *img, int xsz, int ysz, int xc, int yc)
 {

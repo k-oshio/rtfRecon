@@ -51,6 +51,7 @@ void	ivcm();
 
 // quantitative time-SLIP
 void    ts_1();
+void    t1sim();    // time-SLIP param est
 
 int
 main()
@@ -75,6 +76,7 @@ main()
 //		calc_div();
 //		ivcm();
         ts_1();
+//        t1sim();
     }
 	return 0;
 }
@@ -1339,27 +1341,29 @@ path = [NSString stringWithFormat:@"%@/DWI2/IMG.reorder", base];
 // started on 5-16-2020
 void    ts_1()
 {
-    NSString    *base = @"../toshiba_images/TS-nasu-1";
+    NSString    *base = @"../toshiba_images/TS-nasu-1/5s";
+//    NSString    *base = @"../toshiba_images/TS-nasu-1/2s";
     NSString    *path;
     RecImage    *img1, *img2, *ref1, *ref2;
+    RecImage    *sub1, *sub2;
     RecImage    *roi1, *roi2;
     RecImage    *tmp;
-    int         i, j, n;
-    float       *p, sum;
+    int         i, j, n, tLen;
+    float       *p, sum1, sum2;
+    float       *ac1, *ac2;
     BOOL        rot = YES;
     BOOL        removeRef = YES;
 
     system("rm IMG_*.*");
 
-    path = [NSString stringWithFormat:@"%@/5s/120.img", base];
+    path = [NSString stringWithFormat:@"%@/IMG_img1.img", base];
     img1 = [RecImage imageWithKOImage:path];
-    path = [NSString stringWithFormat:@"%@/5s/150.img", base];
+    path = [NSString stringWithFormat:@"%@/IMG_img2.img", base];
     img2 = [RecImage imageWithKOImage:path];
-    path = [NSString stringWithFormat:@"%@/5s/130.img", base];
+    path = [NSString stringWithFormat:@"%@/IMG_ref1.img", base];
     ref1 = [RecImage imageWithKOImage:path];
-    path = [NSString stringWithFormat:@"%@/5s/140.img", base];
+    path = [NSString stringWithFormat:@"%@/IMG_ref2.img", base];
     ref2 = [RecImage imageWithKOImage:path];
-    [ref2 removeSliceAtIndex:50 forLoop:[ref2 zLoop]];
     [img2 copyLoopsOf:img1];
     [ref1 copyLoopsOf:img1];
     [ref2 copyLoopsOf:img1];
@@ -1370,15 +1374,18 @@ void    ts_1()
         ref1 = [ref1 rotByTheta:30.0 * M_PI / 180.0];
         ref2 = [ref2 rotByTheta:30.0 * M_PI / 180.0];
     }
+    tLen = [img1 zDim]/2 - 1;
     if (removeRef) {
-        [img1 crop:[img1 zLoop] to:[img1 zDim]/2 - 1 startAt:1];
-        [img2 crop:[img2 zLoop] to:[img2 zDim]/2 - 1 startAt:1];
+        [img1 crop:[img1 zLoop] to:tLen startAt:1];
+        [img2 crop:[img2 zLoop] to:tLen startAt:1];
     }
     ref1 = [ref1 avgForLoop:[ref1 zLoop]];
     ref2 = [ref2 avgForLoop:[ref2 zLoop]];
 
+// checking subtraction images ... original images are not changed
 // 4->3, pos
     tmp = [img1 copy];
+//    [ref1 multByConst:0.9];
     [tmp subImage:ref1];
     [tmp saveAsKOImage:@"IMG_3p.img"];
 // 3-4, neg
@@ -1399,35 +1406,88 @@ void    ts_1()
     [tmp saveAsKOImage:@"IMG_3n.img"];
 
 // ROI
-    roi1 = [img1 copy];
+    ac1 = (float *)malloc(sizeof(float) * tLen);
+    ac2 = (float *)malloc(sizeof(float) * tLen);
 
-// scale (range) is wrong ... ???s
-printf("img1/roi1 %f %f\n", [img1 minVal], [roi1 minVal]);
+    roi1 = [img1 copy];
+    [roi1 subImage:ref1];
     [roi1 crop:[roi1 xLoop] to:28 startAt:203];
     [roi1 crop:[roi1 yLoop] to:28 startAt:149];
     [roi1 saveAsKOImage:@"IMG_roi1.img"];
+
     roi2 = [img2 copy];
+    [roi2 subImage:ref1];
     [roi2 crop:[roi2 xLoop] to:28 startAt:208];
     [roi2 crop:[roi2 yLoop] to:28 startAt:181];
     [roi2 saveAsKOImage:@"IMG_roi2.img"];
 
     n = [roi1 xDim] * [roi1 yDim];
-    for (i = 0; i < [roi1 zDim]; i++) {
+    for (i = 0; i < tLen; i++) {
         p = [roi1 data] + i * n;
-        sum = 0;
+        sum1 = 0;
         for (j = 0; j < n; j++) {
-            sum += p[j];
+            sum1 += p[j];
+//    printf("%f\n", p[j]); // ???
         }
-        printf("%d %f\n", i, sum);
+        ac1[i] = sum1;
+//        printf("%d %f\n", i, sum1);
     }
     p = [roi2 data];
-    for (i = 0; i < [roi2 zDim]; i++) {
+    for (i = 0; i < tLen; i++) {
         p = [roi2 data] + i * n;
-        sum = 0;
+        sum2 = 0;
         for (j = 0; j < n; j++) {
-            sum += p[j];
+            sum2 += p[j];
         }
-        printf("%d %f\n", i, sum);
+        ac2[i] = sum2;
     }
+
+// accum
+    for (i = 0; i < tLen; i++) {
+        printf("%d %f %f\n", i, ac1[i], ac2[i]);
+    }
+    
+    sum1 = sum2 = 0;
+    for (i = 0; i < tLen; i++) {
+        sum1 += ac1[i];
+        sum2 += ac2[i];
+        printf("%d %f %f\n", i, sum1/(i+1), sum2/(i+1));
+    }
+    free(ac1);
+    free(ac2);
+}
+
+void
+t1sim()
+{
+    int     iter, nIter = 4;
+    int     i, n = 100;
+    float   t, dt;
+    float   TR = 3000;
+//    float   TI = 2200;
+//    float   Tread = 800;
+    float   tcross = 0;
+    float   T1 = 4000;  // water t1
+    float   T2 = 3000;
+    float   s;  // longitudinal mag
+
+    s = 1.0;    // thermal eq
+    dt = TR / n;
+    for (iter = 0; iter < nIter; iter++) {
+        tcross = 0;
+        // inversion
+        s = -s;
+        for (i = 0; i < n; i++) {
+            t = (float)i * TR / n;
+            s = 1.0 - (1.0 - s) * exp(-dt / T1);
+            if (tcross == 0 && s > 0) {
+                tcross = t;
+            }
+            if (iter == (nIter - 1)) {
+                printf("%f %f\n", t, s);
+            }
+        }
+    }
+    printf("tcross = %f\n", tcross);
 }
 

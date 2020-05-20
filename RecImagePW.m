@@ -1295,12 +1295,12 @@ float toshibaRad(float th)
 // 2D: test with fraction of stationary part & ref slice
     mx = 1.0;
     slc = 0;
-    min_frac = st_frac;
+    min_frac = 0;
     for (i = 0; i < 10; i++) {   // frac
         printf("%d ", i);
         for (j = 0; j < 10; j++) {   // ref slice
             st_frac = (float)i / 10;
-            sft = [prj estShiftWithFrac:st_frac slice:j nIter:2 err:&err dbg:NO];
+            sft = [prj estShiftWithFrac:st_frac slice:j nIter:2 err:&err dbg:NO]; // nIter = 2
     //printf("%d %f\n", i, err);
             printf("%f ", err);
             if (err < mx) {
@@ -1312,20 +1312,8 @@ float toshibaRad(float th)
         printf("\n");
     }
 
-// test with different ref slice
-//    mx = 1.0;
-//    slc = 0;
-//    for (i = 0; i < 10; i++) {
-//        sft = [prj estShiftWithFrac:min_frac slice:i nIter:20 err:&err dbg:YES];
-//        printf("%d %f\n", i, err);
-//        if (err < mx) {
-//            mx = err;
-//            slc = i;
-//        }
-//    }
-
-// min_frac = 0.3; slc = 4;
-    printf("min = %f with frac = %f, slc = %d, sft rms = %f\n", mx, min_frac, slc, [sft rmsVal]);
+     printf("min = %f with frac = %f, slc = %d, sft rms = %f\n", mx, min_frac, slc, [sft rmsVal]);
+//min_frac = 0.9; slc = 9;
 
     sft = [prj estShiftWithFrac:min_frac slice:slc nIter:20 err:&err dbg:YES];
     
@@ -1335,7 +1323,7 @@ float toshibaRad(float th)
 - (RecImage *)estShiftWithFrac:(float)fr slice:(int)slc nIter:(int)nIter err:(float *)err dbg:(BOOL)dbg   // innter loop of above
 {
     RecImage    *prj, *st, *mv, *sft, *nsft;        // stationary[xDim], moving[xDim], shift[yDim]
-    RecImage    *est, *dif;
+    RecImage    *est, *dif, *corr;
     int         i, j, ix, iter;
     float       *m, *p;
     float       mx, er;
@@ -1366,7 +1354,11 @@ float toshibaRad(float th)
         [est subImage:st];              // ms
 
         // 2) shift
-        sft = [est corr1dWithRef:mv];    // unit:pixels
+   //     sft = [est corr1dWithRef:mv];    // unit:pixels
+        corr = [est xCorrelationWith:mv width:0.2 triFilt:NO];
+        [corr saveAsKOImage:@"IMG_corr"];
+        sft = [corr corrToSft1d:[corr xLoop]];
+
         mx = [sft meanVal];
         [sft addConst:-mx];             // zero-mean
         nsft = [sft copy];
@@ -1381,9 +1373,30 @@ float toshibaRad(float th)
         [est addImage:st];
         dif = [prj copy];
         [dif subImage:est];
-     //   [dif fTriWin1DforLoop:[dif xLoop]];
+
         er = [dif rmsVal];
+        [corr saveAsKOImage:@"IMG_corr"];
+       // [corr fGauss1DHP:0.1 forLoop:[corr xLoop] frac:1.0];
         
+        // remove peak
+//        for (i = 0; i < [corr yDim]; i++) {
+//            p = [corr data] + i * [corr xDim];
+//            mx = 0; ix = 0;
+//            for (j = 0; j < [corr xDim]; j++) {
+//                if (p[j] > mx) {
+//                    mx = p[j];
+//                    ix = j;
+//                }
+//            }
+//            for (j = ix - 1; j < ix + 1; j++) {
+//                p[j] = 0;
+//            }
+//        }
+//        [corr saveAsKOImage:@"IMG_corr_f"];
+
+
+ //       er = [corr rmsVal];
+
         if (dbg) {
             printf("%d %e\n", iter, er);
         }
@@ -1420,7 +1433,7 @@ float toshibaRad(float th)
     int             i;
     float           scl;
     int             nScl = 10;
-    float           scl_range = 1.0;    // (0 - 2.0)
+    float           scl_range = 1.5;    // (0 - 2.0)
     RecLoop         *scLp, *ch;
     float           lap_w = 0.2;    // 0.3
     BOOL            dbg = YES;

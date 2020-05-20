@@ -74,13 +74,30 @@ NSString *base = @"/Users/oshio/epic/rtf3_data/clinical";
 //NSString *name = @"kariya";       int pNum =  3584; BOOL zFlip = NO;  // 0.9, 1
 //NSString *name = @"kawano";       int pNum = 18944; BOOL zFlip = YES; // 0.8, 2
 //NSString *name = @"kimura";       int pNum = 28672; BOOL zFlip = YES; // 0.8, 7
-//NSString *name = @"kiura";        int pNum = 14336; BOOL zFlip = NO;      // 0.9, 6 -> X
-NSString *name = @"kobayashi";    int pNum = 17920; BOOL zFlip = NO;      // 0.8, 9
-//NSString *name = @"";             int pNum = ; BOOL zFlip = NO;
-//NSString *name = @"";             int pNum = ; BOOL zFlip = NO;
-//NSString *name = @"";             int pNum = ; BOOL zFlip = NO;
-//NSString *name = @"";             int pNum = ; BOOL zFlip = NO;
-//NSString *name = @"";             int pNum = ; BOOL zFlip = NO;
+//NSString *name = @"kiura";        int pNum = 14336; BOOL zFlip = NO;  // 0.9, 6 -> X
+//NSString *name = @"kobayashi";    int pNum = 17920; BOOL zFlip = NO;  // 0.8, 9
+//NSString *name = @"kumahara";     int pNum = 17920; BOOL zFlip = NO;  // 0.7, 2
+//NSString *name = @"masuda";       int pNum = 13824; BOOL zFlip = NO;  // 0.9, 9 o
+//NSString *name = @"matsuda";      int pNum = 20992; BOOL zFlip = YES;  // 0.9, 4
+//NSString *name = @"miyazawa_nb";  int pNum = 5632; BOOL zFlip = NO;    // 0.5, 8 X
+//NSString *name = @"nakazawa";     int pNum = 27648; BOOL zFlip = NO;   // 0.9, 6
+//NSString *name = @"noguchi";      int pNum = 36864; BOOL zFlip = NO;   // 0.8, 5
+//NSString *name = @"ogino";        int pNum = 46592; BOOL zFlip = YES;  // 0.6, 4
+//NSString *name = @"oka";          int pNum = 12800; BOOL zFlip = NO;   // 0.9, 3
+//NSString *name = @"saitou";       int pNum = 15872; BOOL zFlip = YES;  // 0.7, 4
+//NSString *name = @"sakai";        int pNum = 16384; BOOL zFlip = YES;  // 0.7, 1 oo
+//NSString *name = @"shimojo";      int pNum = 40960; BOOL zFlip = NO;   // 0.9, 9
+//NSString *name = @"shinomiya";    int pNum = 13824; BOOL zFlip = YES;   // 0.8, 9 X chk
+//NSString *name = @"suzuki";       int pNum = 20992; BOOL zFlip = YES;   // 0.9, 8
+//NSString *name = @"takada";       int pNum = 12288; BOOL zFlip = YES;   // 0.7, 5 chk
+//NSString *name = @"tanaka";       int pNum = 32768; BOOL zFlip = YES;   // 0.0, 4
+//NSString *name = @"taniguchi";    int pNum = 13824; BOOL zFlip = YES;   // 0.9, 7
+//NSString *name = @"tsurufuji";    int pNum = 25088; BOOL zFlip = YES;   // 0.4, 7
+//NSString *name = @"wada";         int pNum = 19456; BOOL zFlip = YES;   // 0.9, 7 X
+//NSString *name = @"yamamoto";     int pNum = 43520; BOOL zFlip = NO;    // 0.9, 2
+//NSString *name = @"yasue";        int pNum = 9216; BOOL zFlip = YES;    // 0.9, 7 X chk
+NSString *name = @"yawata";       int pNum = 1024; BOOL zFlip = NO;     // 0.0, 1 X
+//NSString *name = @"yoshinari";    int pNum = 13824; BOOL zFlip = NO;    // 0.6, 9
 
 int
 //main(int ac, char *av[])
@@ -104,17 +121,19 @@ main()
 TIMER_ST
     @autoreleasepool {
         
-    system("rm *.img, img*, IMG_*");
-    system("rm sft*.txt");
+    system("rm *.img img* IMG_*");
 
-        if (0) {
+        if (1) {
             path = [NSString stringWithFormat:@"%@/%@/pw_sav", base, name];
             pw = [RecImage imageFromFile:path relativePath:NO];
             sft = [pw shiftFromK0];
             [sft saveAsKOImage:@"IMG_sft"];
+            pw = [pw correctZShift:sft];
+            ch = [RecLoop findLoop:@"Channel"];
+            pw = [pw combineForLoop:ch];
+            [pw saveAsKOImage:@"IMG_pws"];
             exit(0);
         }
-
 
 	// (1) === load raw data
         path = [NSString stringWithFormat:@"%@/%@/P%05d.7", base, name, pNum];
@@ -155,8 +174,8 @@ TIMER_ST
 		[raw fft1d:rdZF direction:REC_FORWARD];	// sinogram
         [pw copyImage:raw]; // sinogram -> pw
 		pw_c = [pw combinePWForLoop:ch withCoil:coil];
-        [pw_c saveAsKOImage:@"pw_c.img"];
-        [pw saveAsKOImage:@"pw.img"];
+        [pw_c saveAsKOImage:@"pw.img"];
+//        [pw saveAsKOImage:@"pw.img"];
 
         // save to original data location
         path = [NSString stringWithFormat:@"%@/%@/pw_sav", base, name];
@@ -174,7 +193,7 @@ TIMER_ST
         [grid grid2d:raw to:img];
         img_c = [img combineForLoop:ch withCoil:coil];
 		[img_c SCIC];
-		[img_c saveAsKOImage:@"img_c.img"]; // first image (before correction)
+		[img_c saveAsKOImage:@"img.img"]; // first image (before correction)
 
 		img_coro_c = [RecImage imageWithImage:img_c];
 		[img_coro_c swapLoop:[img_c zLoop] withLoop:[img_c yLoop]];
@@ -183,11 +202,16 @@ TIMER_ST
 
     // sft est
         sft = [pw shiftFromK0];
-        [sft saveAsKOImage:@"IMG_sft"];
+    //    [sft saveAsKOImage:@"IMG_sft"];
+    
+    // rigid body correction with scale = 1
+     //   pws = [pw shift###
+    
+    // ###
 
     // correction
         imgs = [img stepCorrWithPW:pw gridder:grid sft:sft];
-        [imgs saveAsKOImage:@"IMG_imgs"];
+        [imgs saveAsKOImage:@"imgs.img"];
 
 
     } // autoreleasepool

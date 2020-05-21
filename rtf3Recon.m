@@ -57,10 +57,10 @@ RDBM header version = 11.00
 
 // patients
 NSString *base = @"/Users/oshio/epic/rtf3_data/clinical";
-//NSString *name = @"akasaka";      int pNum = 10240; BOOL zFlip = NO;  // 0.3, 5
+//NSString *name = @"akasaka";      int pNum = 10240; BOOL zFlip = NO;  // 0.7, 0
 //NSString *name = @"akita";        int pNum = 25088; BOOL zFlip = NO;  // 0.6, 7 
 //NSString *name = @"akiyama";      int pNum = 24064; BOOL zFlip = NO;  // 0.7, 0
-//NSString *name = @"anai";         int pNum = 13312; BOOL zFlip = YES; // 0.8, 7
+//NSString *name = @"anai";         int pNum = 13312; BOOL zFlip = YES; // 0.8, 7 X
 //NSString *name = @"arimoto";      int pNum =  8704; BOOL zFlip = NO;  // 0.8, 3
 //NSString *name = @"eno";          int pNum = 12288; BOOL zFlip = NO;  // 0.8, 3
 //NSString *name = @"funatogawa";   int pNum =  8704; BOOL zFlip = NO;  // 0.6, 4
@@ -68,7 +68,7 @@ NSString *base = @"/Users/oshio/epic/rtf3_data/clinical";
 //NSString *name = @"hatakeyama";   int pNum = 49152; BOOL zFlip = YES; // 0.4, 6
 //NSString *name = @"hayashi";      int pNum = 40960; BOOL zFlip = NO;  // 0.6, 0
 //NSString *name = @"ikeda";        int pNum = 13824; BOOL zFlip = YES; // 0.3. 2 -> minErr at 0.6
-//NSString *name = @"ishii";        int pNum = 19456; BOOL zFlip = NO;  // 0.8, 3
+NSString *name = @"ishii";        int pNum = 19456; BOOL zFlip = NO;  // 0.8, 3 -> X with filter
 //NSString *name = @"itou";         int pNum = 34304; BOOL zFlip = YES; // 0.9, 1
 //NSString *name = @"kanai";        int pNum = 41984; BOOL zFlip = NO;  // 0.8, 8
 //NSString *name = @"kariya";       int pNum =  3584; BOOL zFlip = NO;  // 0.9, 1
@@ -94,9 +94,9 @@ NSString *base = @"/Users/oshio/epic/rtf3_data/clinical";
 //NSString *name = @"taniguchi";    int pNum = 13824; BOOL zFlip = YES;   // 0.9, 7
 //NSString *name = @"tsurufuji";    int pNum = 25088; BOOL zFlip = YES;   // 0.4, 7
 //NSString *name = @"wada";         int pNum = 19456; BOOL zFlip = YES;   // 0.9, 7 X
-//NSString *name = @"yamamoto";     int pNum = 43520; BOOL zFlip = NO;    // 0.9, 2
-//NSString *name = @"yasue";        int pNum = 9216; BOOL zFlip = YES;    // 0.9, 7 X chk
-NSString *name = @"yawata";       int pNum = 1024; BOOL zFlip = NO;     // 0.0, 1 X
+//NSString *name = @"yamamoto";     int pNum = 43520; BOOL zFlip = NO;    // 0.9, 6
+//NSString *name = @"yasue";        int pNum = 9216; BOOL zFlip = YES;    // 0.6, 4 X -> 0.2, 0 is best
+//NSString *name = @"yawata";       int pNum = 1024; BOOL zFlip = NO;     // 0.9, 0
 //NSString *name = @"yoshinari";    int pNum = 13824; BOOL zFlip = NO;    // 0.6, 9
 
 int
@@ -193,25 +193,28 @@ TIMER_ST
         [grid grid2d:raw to:img];
         img_c = [img combineForLoop:ch withCoil:coil];
 		[img_c SCIC];
-		[img_c saveAsKOImage:@"img.img"]; // first image (before correction)
+        path = [NSString stringWithFormat:@"%@/%@/img.img", base, name];
+		[img_c saveAsKOImage:path]; // first image (before correction)
 
 		img_coro_c = [RecImage imageWithImage:img_c];
 		[img_coro_c swapLoop:[img_c zLoop] withLoop:[img_c yLoop]];
 		[img_coro_c copyImage:img_c];
-		[img_coro_c saveAsKOImage:@"img_coro.img"];
+        path = [NSString stringWithFormat:@"%@/%@/img_coro.img", base, name];
+		[img_coro_c saveAsKOImage:path];
 
     // sft est
         sft = [pw shiftFromK0];
     //    [sft saveAsKOImage:@"IMG_sft"];
     
     // rigid body correction with scale = 1
-     //   pws = [pw shift###
+        pws = [pw correctZShift:sft];
+        pws = [pws combineForLoop:ch];
+        [pws saveAsKOImage:@"IMG_pws"];
     
-    // ###
-
     // correction
         imgs = [img stepCorrWithPW:pw gridder:grid sft:sft];
-        [imgs saveAsKOImage:@"imgs.img"];
+        path = [NSString stringWithFormat:@"%@/%@/img_scl.img", base, name];
+        [imgs saveAsKOImage:path];
 
 
     } // autoreleasepool

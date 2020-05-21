@@ -63,7 +63,7 @@
 
 - (RecImage *)corr1dWithRef:(RecImage *)ref;
 - (RecImage *)corrToSft1d:(RecLoop *)lp;
-- (RecImage *)correctShift1d:(RecImage *)sft forLoop:(RecLoop *)lp;
+//- (RecImage *)correctShift1d:(RecImage *)sft forLoop:(RecLoop *)lp;
 
 
 // stopping criterion

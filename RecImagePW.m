@@ -1296,9 +1296,9 @@ float toshibaRad(float th)
     mx = 1.0;
     slc = 0;
     min_frac = 0;
-    for (i = 0; i < 10; i++) {   // frac
+    for (i = 0; i < 10; i++) {   // 10 frac
         printf("%d ", i);
-        for (j = 0; j < 10; j++) {   // ref slice
+        for (j = 0; j < 10; j++) {   // 10 ref slice
             st_frac = (float)i / 10;
             sft = [prj estShiftWithFrac:st_frac slice:j nIter:2 err:&err dbg:NO]; // nIter = 2
     //printf("%d %f\n", i, err);
@@ -1313,7 +1313,7 @@ float toshibaRad(float th)
     }
 
      printf("min = %f with frac = %f, slc = %d, sft rms = %f\n", mx, min_frac, slc, [sft rmsVal]);
-//min_frac = 0.9; slc = 9;
+//min_frac = 0.2; slc = 0;
 
     sft = [prj estShiftWithFrac:min_frac slice:slc nIter:20 err:&err dbg:YES];
     
@@ -1323,7 +1323,7 @@ float toshibaRad(float th)
 - (RecImage *)estShiftWithFrac:(float)fr slice:(int)slc nIter:(int)nIter err:(float *)err dbg:(BOOL)dbg   // innter loop of above
 {
     RecImage    *prj, *st, *mv, *sft, *nsft;        // stationary[xDim], moving[xDim], shift[yDim]
-    RecImage    *est, *dif, *corr;
+    RecImage    *est, *dif, *corr, *tmp;
     int         i, j, ix, iter;
     float       *m, *p;
     float       mx, er;
@@ -1351,10 +1351,9 @@ float toshibaRad(float th)
 
         // 1) shift(mv)
         est = [prj copy];
-        [est subImage:st];              // ms
+        [est subImage:st];
 
         // 2) shift
-   //     sft = [est corr1dWithRef:mv];    // unit:pixels
         corr = [est xCorrelationWith:mv width:0.2 triFilt:NO];
         [corr saveAsKOImage:@"IMG_corr"];
         sft = [corr corrToSft1d:[corr xLoop]];
@@ -1365,19 +1364,21 @@ float toshibaRad(float th)
         [nsft negate];
 
         // 3) ms
-        [est clear];
-        [est copyImage:mv];
-        est = [est correctShift1d:nsft forLoop:[mv xLoop]]; // pixels
-
+        [est copyImage:mv];     // mv is 1d, est is 2d
+        est = [est ftShift1d:[mv xLoop] by:nsft]; // mv-sft
+ 
         // 4) diff
-        [est addImage:st];
+        [est addImage:st];  // est = mv_sft + st
         dif = [prj copy];
         [dif subImage:est];
 
+        tmp = [corr copy];
+        [tmp fGauss1DHP:0.3 forLoop:[corr xLoop] frac:1.0];
+
+     //   er = [dif rmsVal] + 0.0005 * [tmp rmsVal];
         er = [dif rmsVal];
-        [corr saveAsKOImage:@"IMG_corr"];
+
        // [corr fGauss1DHP:0.1 forLoop:[corr xLoop] frac:1.0];
-        
         // remove peak
 //        for (i = 0; i < [corr yDim]; i++) {
 //            p = [corr data] + i * [corr xDim];
@@ -1404,20 +1405,19 @@ float toshibaRad(float th)
 
         mv = [prj copy];
         [mv subImage:st];
-        mv = [mv correctShift1d:sft forLoop:[mv xLoop]];
+        mv = [mv ftShift1d:[mv xLoop] by:sft]; // unit: pixels
         mv = [mv avgForLoop:[mv yLoop]];
 
     //    if (dbg && (iter == nIter)) {
         if (dbg) {
-            RecImage    *tmp_img;
             [sft saveAsKOImage:@"IMG_sft01.img"];
             [mv saveAsKOImage:@"IMG_mv01.img"];
             [st saveAsKOImage:@"IMG_st01.img"];
             [dif saveAsKOImage:@"IMG_dif01.img"];
             [est saveAsKOImage:@"IMG_est01.img"];
-            tmp_img = [est copy];
-            [tmp_img subImage:st];
-            [tmp_img saveAsKOImage:@"IMG_ms01.img"];
+            tmp = [est copy];
+            [tmp subImage:st];
+            [tmp saveAsKOImage:@"IMG_ms01.img"];
             [sft saveShift:1];
         }
     }
@@ -1490,7 +1490,8 @@ float toshibaRad(float th)
     [tmp_img saveAsKOImage:@"imgs_final_F.img"];
     [tmp_img swapLoop:[tmp_img yLoop] withLoop:[tmp_img zLoop]];
     [tmp_img saveAsKOImage:@"imgs_final_ax.img"];
-    return imgs;
+
+    return imgs;    // img_scl -> return final, or final_ax
 }
 
 // sft: unit is pixels
@@ -1659,19 +1660,6 @@ Rec_find_nearest_peak(float *p, int skip, int len)
         *q = Rec_find_nearest_peak(p, skip, len);
     };
 	return [self applyProjProc:proc forLoop:lp];
-}
-
-// unit: pixels
-- (RecImage *)correctShift1d:(RecImage *)sft forLoop:(RecLoop *)lp
-{
-    RecImage		*img, *param;
-	int				len;
-
-	param = [sft copy];
-	len = [param xDim];
-	img = [self ftShift1d:lp by:param]; // unit: pixels
-
-    return img;
 }
 
 // vector delta

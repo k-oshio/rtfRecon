@@ -1304,7 +1304,7 @@ float toshibaRad(float th)
     }
 
 // 2D: test with fraction of stationary part & ref slice
-    if (1) {
+    if (0) {
         mx = 100.0;
         slc = 0;
         min_frac = 0;
@@ -1325,7 +1325,7 @@ float toshibaRad(float th)
         }
         printf("min = %4e with frac = %3.1f, slc = %d, sft rms = %4e\n", mx, min_frac, slc, [sft rmsVal]);
     } else {
-        min_frac = 0.7; slc = 0;    // 0, 1, 3, 9 ()
+        min_frac = 1.0; slc = 1;    // 0, 1, 3, 9 ()
     }
 
 
@@ -1359,6 +1359,10 @@ float toshibaRad(float th)
         [mv saveAsKOImage:@"IMG_mv0"];
         [prj subImage:st];
         [prj saveAsKOImage:@"IMG_in_st"];
+        tmp = [prj copy];
+        [tmp magnitude];
+        [tmp gauss2DLP:0.1];
+        [tmp saveAsKOImage:@"IMG_in_energy"];
     }
 
 // === iteration ===
@@ -1420,6 +1424,10 @@ float toshibaRad(float th)
             [mv saveAsKOImage:@"IMG_mv01.img"];
             [st saveAsKOImage:@"IMG_st01.img"];
             [dif saveAsKOImage:@"IMG_dif01.img"];
+            tmp = [dif copy];
+            [tmp magnitude];
+            [tmp gauss2DLP:0.1];
+            [tmp saveAsKOImage:@"IMG_dif_energy"];
             [est saveAsKOImage:@"IMG_est01.img"];
             tmp = [est copy];
             [tmp subImage:st];

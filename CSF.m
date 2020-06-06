@@ -43,8 +43,9 @@ void	calc_div();		// divergence (compression)
 // IVIM (T2) sim
 void	t2sim();
 
-// PC ROI analysis
+// PC flow analysis
 void	pc_roi();
+void	pc_avg();
 
 // IVCM (intra-voxel coherent motion)
 void	ivcm();
@@ -72,10 +73,11 @@ main()
 //		read_raw_aqp();
 //		read_pc();
 //		pc_roi();
+		pc_avg();
 //		t2sim();
 //		calc_div();
 //		ivcm();
-        ts_1();
+//        ts_1();
 //        t1sim();
     }
 	return 0;
@@ -555,6 +557,38 @@ pc_roi()
 
 	path = 	[NSString stringWithFormat:@"%@/%@/phase.roi", base, inser];
 	[img saveAsKOImage:path];
+}
+
+void
+pc_avg()
+{
+	NSString	*base = @"../toshiba_images/DWI-nasu-5";
+	NSString	*inser = @"3V";
+//	NSString	*inser = @"3Vu";
+//	NSString	*inser = @"4V";
+//	NSString	*inser = @"4Vu";
+	NSString	*path;
+	RecImage	*img, *avg;
+	int			dim, nImg;
+
+	path = 	[NSString stringWithFormat:@"%@/%@/img0.cpx", base, inser];
+	img = [RecImage imageWithKOImage:path];
+	[img phase];
+	[img removeSliceAtIndex:0 forLoop:[img zLoop]];
+	path = 	[NSString stringWithFormat:@"%@/%@/img0.phs", base, inser];
+	[img saveAsKOImage:path];
+
+	avg = [img avgForLoop:[img zLoop]];
+	[avg gauss2DHP:0.05 frac:1.0];
+	path = 	[NSString stringWithFormat:@"%@/%@/phase.avg", base, inser];
+	[avg saveAsKOImage:path];
+
+	avg = [img copy];
+
+	[avg gauss1DLP:0.1 forLoop:[avg zLoop]];
+	path = 	[NSString stringWithFormat:@"%@/%@/phase.mvavg", base, inser];
+	[avg saveAsKOImage:path];
+	
 }
 
 // mg PCA

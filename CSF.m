@@ -53,6 +53,7 @@ void	ivcm();
 // quantitative time-SLIP
 void    ts_1();
 void    t1sim();    // time-SLIP param est
+void    partial();  // partial volume effect for T2 est
 
 int
 main()
@@ -73,12 +74,13 @@ main()
 //		read_raw_aqp();
 //		read_pc();
 //		pc_roi();
-		pc_avg();
+//		pc_avg();
 //		t2sim();
 //		calc_div();
 //		ivcm();
 //        ts_1();
 //        t1sim();
+        partial();
     }
 	return 0;
 }
@@ -563,9 +565,9 @@ void
 pc_avg()
 {
 	NSString	*base = @"../toshiba_images/DWI-nasu-5";
-	NSString	*inser = @"3V";
+//	NSString	*inser = @"3V";
 //	NSString	*inser = @"3Vu";
-//	NSString	*inser = @"4V";
+	NSString	*inser = @"4V";
 //	NSString	*inser = @"4Vu";
 	NSString	*path;
 	RecImage	*img, *avg;
@@ -586,6 +588,7 @@ pc_avg()
 	avg = [img copy];
 
 	[avg gauss1DLP:0.1 forLoop:[avg zLoop]];
+    [avg gauss2DHP:0.05 frac:1.0];
 	path = 	[NSString stringWithFormat:@"%@/%@/phase.mvavg", base, inser];
 	[avg saveAsKOImage:path];
 	
@@ -1525,3 +1528,19 @@ t1sim()
     printf("tcross = %f\n", tcross);
 }
 
+void
+partial()
+{
+    float   m1 = 0.5;
+    float   m2 = 0.5;
+    float   t2_1 = 60;
+    float   t2_2 = 2000;
+    float   te = 100;
+    float   sg1, sg2;
+
+    printf("partial\n");
+    
+    sg1 = m1 * exp(-te / t2_1); printf("1) %f %f\n", m1, sg1);
+    sg2 = m2 * exp(-te / t2_2); printf("2) %f %f\n", m2, sg2);
+    t2_1 = -te / log(sg1 + sg2); printf("t2_partial = %f\n", t2_1);
+}

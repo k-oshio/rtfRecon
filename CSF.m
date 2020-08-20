@@ -74,13 +74,13 @@ main()
 //		read_raw_aqp();
 //		read_pc();
 //		pc_roi();
-//		pc_avg();
+		pc_avg();
 //		t2sim();
 //		calc_div();
 //		ivcm();
 //        ts_1();
 //        t1sim();
-        partial();
+//        partial();
     }
 	return 0;
 }
@@ -567,8 +567,8 @@ pc_avg()
 	NSString	*base = @"../toshiba_images/DWI-nasu-5";
 //	NSString	*inser = @"3V";
 //	NSString	*inser = @"3Vu";
-	NSString	*inser = @"4V";
-//	NSString	*inser = @"4Vu";
+//	NSString	*inser = @"4V";
+	NSString	*inser = @"4Vu";
 	NSString	*path;
 	RecImage	*img, *avg;
 	int			dim, nImg;

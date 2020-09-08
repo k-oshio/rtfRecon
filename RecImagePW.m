@@ -1304,7 +1304,7 @@ float toshibaRad(float th)
     }
 
 // 2D: test with fraction of stationary part & ref slice
-    if (0) {
+    if (1) {
         mx = 100.0;
         slc = 0;
         min_frac = 0;

@@ -41,7 +41,7 @@ NSString *base = @"/Users/oshio/epic/rtf3_data/clinical";
 //NSString *name = @"akita";        int pNum = 25088; BOOL zFlip = NO;  // 0.9, 1 X (bad data)
 //NSString *name = @"akiyama";      int pNum = 24064; BOOL zFlip = NO;  // 0.7, 0 X -> info in upper part
 //NSString *name = @"anai";         int pNum = 13312; BOOL zFlip = YES; // 0.9, 3
-//NSString *name = @"arimoto";      int pNum =  8704; BOOL zFlip = NO;  // 0.3, 3
+NSString *name = @"arimoto";      int pNum =  8704; BOOL zFlip = NO;  // 0.3, 3
 //NSString *name = @"eno";          int pNum = 12288; BOOL zFlip = NO;  // 0.8, 2 X (ok with HPF, 0.2, 0.7, tri on, zf off)
 //NSString *name = @"funatogawa";   int pNum =  8704; BOOL zFlip = NO;  // 0.1, 5
 //NSString *name = @"furuyama";     int pNum = 41984; BOOL zFlip = NO;  // 0.5, 5 X -> chk
@@ -65,7 +65,7 @@ NSString *base = @"/Users/oshio/epic/rtf3_data/clinical";
 //NSString *name = @"ogino";        int pNum = 46592; BOOL zFlip = YES;  // 0.1, 6
 //NSString *name = @"oka";          int pNum = 12800; BOOL zFlip = NO;   // 0.7, 1 X
 //NSString *name = @"saitou";       int pNum = 15872; BOOL zFlip = YES;  // 0.9, 5
-NSString *name = @"sakai";        int pNum = 16384; BOOL zFlip = YES;  // 0.9, 6 oo
+//NSString *name = @"sakai";        int pNum = 16384; BOOL zFlip = YES;  // 0.9, 6 oo
 //NSString *name = @"shimojo";      int pNum = 40960; BOOL zFlip = NO;   // 0.9, 9
 //NSString *name = @"shinomiya";    int pNum = 13824; BOOL zFlip = YES;   // 0.9, 3
 //NSString *name = @"suzuki";       int pNum = 20992; BOOL zFlip = YES;   // 0.4, 9
@@ -105,7 +105,9 @@ TIMER_ST
         
     system("rm *.img img* IMG_*");
 
-        if (1) {
+// chk shift est part (fast, but initial condition dependent)
+// find good initial cond here, then apply rest of recon (time consuming)
+        if (0) {
             path = [NSString stringWithFormat:@"%@/%@/pw_sav", base, name];
             pw = [RecImage imageFromFile:path relativePath:NO];
             sft = [pw shiftFromK0];

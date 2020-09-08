@@ -14,7 +14,8 @@ void		mgphs_to_cpx1(NSString *base, NSString *inser, NSString *ser, int nslc);	/
 void		mgphs_to_cpx2(NSString *base, NSString *inser, NSString *ser, int nslc);	// b0 / bxxx
 
 // pre-processing (mag/phs -> cpx, single slice)
-void	rinkan_1();
+void    rinkan_1();
+void    rinkan_1_2();   // CST ivim
 void	rinkan_2();
 void	rinkan_3();
 void	rinkan_4();
@@ -60,6 +61,7 @@ main()
 {
     @autoreleasepool {
 //		rinkan_1();
+        rinkan_1_2();
 //		rinkan_4();
 //		rinkan_5();
 //		mg_pca();
@@ -74,7 +76,7 @@ main()
 //		read_raw_aqp();
 //		read_pc();
 //		pc_roi();
-		pc_avg();
+//		pc_avg();
 //		t2sim();
 //		calc_div();
 //		ivcm();
@@ -310,6 +312,69 @@ rinkan_1()
 
 	printf("test\n");
 
+}
+
+void
+rinkan_1_2()
+{
+    RecImage    *img, *avg, *mb;
+//    NSString    *base = @"../toshiba_images/DWI-rinkan-1/MPG-RO-1";
+    NSString    *base = @"../toshiba_images/DWI-rinkan-1/MPG-PE";
+    NSString    *path;
+    int         n;
+printf("rinkan 1-2\n");
+
+// b = 0
+    n = 0;
+    path = [NSString stringWithFormat:@"%@/b200/b200-0-mg", base];
+    img = [RecImage imageWithKOImage:path];
+    n += [img zDim];
+    img = [img sumForLoop:[img zLoop]];
+    avg = [img copy];
+    mb = [img copy];
+    [mb addLoopWithLength:4];
+    
+    path = [NSString stringWithFormat:@"%@/b500/b500-0-mg", base];
+    img = [RecImage imageWithKOImage:path];
+    n += [img zDim];
+    img = [img sumForLoop:[img zLoop]];
+    [img copyLoopsOf:avg];
+    [avg addImage:img];
+    
+    path = [NSString stringWithFormat:@"%@/b1000/b1000-0-mg", base];
+    img = [RecImage imageWithKOImage:path];
+    n += [img zDim];
+    img = [img sumForLoop:[img zLoop]];
+    [img copyLoopsOf:avg];
+    [avg addImage:img];
+    
+    [avg multByConst:1.0/n];
+    [mb copySlice:avg atIndex:0];
+    
+    // b = 200
+    path = [NSString stringWithFormat:@"%@/b200/b200-200-mg", base];
+    img = [RecImage imageWithKOImage:path];
+    img = [img avgForLoop:[img zLoop]];
+    [img copyLoopsOf:avg];
+    [mb copySlice:img atIndex:1];
+
+    // b = 500
+    path = [NSString stringWithFormat:@"%@/b500/b500-500-mg", base];
+    img = [RecImage imageWithKOImage:path];
+    img = [img avgForLoop:[img zLoop]];
+    [img copyLoopsOf:avg];
+    [mb copySlice:img atIndex:2];
+
+    // b = 1000
+    path = [NSString stringWithFormat:@"%@/b1000/b1000-1000-mg", base];
+    img = [RecImage imageWithKOImage:path];
+    img = [img avgForLoop:[img zLoop]];
+    [img copyLoopsOf:avg];
+    [mb copySlice:img atIndex:3];
+
+// save
+    path = [NSString stringWithFormat:@"%@/IMG_mb", base];
+    [mb saveAsKOImage:path];
 }
 
 void
@@ -566,9 +631,9 @@ pc_avg()
 {
 	NSString	*base = @"../toshiba_images/DWI-nasu-5";
 //	NSString	*inser = @"3V";
-//	NSString	*inser = @"3Vu";
+	NSString	*inser = @"3Vu";
 //	NSString	*inser = @"4V";
-	NSString	*inser = @"4Vu";
+//	NSString	*inser = @"4Vu";
 	NSString	*path;
 	RecImage	*img, *avg;
 	int			dim, nImg;

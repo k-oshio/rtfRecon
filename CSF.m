@@ -24,7 +24,9 @@ void	nasu_1();
 void	read_csv();
 void	reslice();
 void	read_raw_aqp();
-void	read_pc();
+void    read_pc();
+void    read_pc2();
+void    read_pc3();
 
 // mg PCA
 void	mg_pca();
@@ -56,12 +58,21 @@ void    ts_1();
 void    t1sim();    // time-SLIP param est
 void    partial();  // partial volume effect for T2 est
 
+// ventricular compartment
+void    vcomp1();   // (linear )compartmemt model
+void    vcomp2();   // mass preservation eq
+void    vcomp3();   // rk4 (linear model)
+
+// noise power spectrum (move to lib when done)
+void    nps();
+
+
 int
 main()
 {
     @autoreleasepool {
 //		rinkan_1();
-        rinkan_1_2();
+//        rinkan_1_2();
 //		rinkan_4();
 //		rinkan_5();
 //		mg_pca();
@@ -74,8 +85,11 @@ main()
 //		read_csv();
 //		reslice();
 //		read_raw_aqp();
-//		read_pc();
+//        read_pc();
+//        read_pc2();
+//        read_pc3();
 //		pc_roi();
+//        nps();
 //		pc_avg();
 //		t2sim();
 //		calc_div();
@@ -83,6 +97,9 @@ main()
 //        ts_1();
 //        t1sim();
 //        partial();
+//        vcomp1();    // rect / trap
+        vcomp2();     // difference
+//        vcomp3();     // rk4
     }
 	return 0;
 }
@@ -532,6 +549,37 @@ read_pc()
 }
 
 void
+read_pc2()  // Nasu-14
+{
+    NSString            *base = @"../toshiba_images/DWI-nasu-14";
+    NSString            *inser = @"OrigImages/tmp";
+
+    mgphs_to_cpx1(base, inser, @"b10-1", 1);
+    mgphs_to_cpx1(base, inser, @"b10-2", 1);
+    mgphs_to_cpx1(base, inser, @"b500-1", 1);
+    mgphs_to_cpx1(base, inser, @"b500-2", 1);
+    mgphs_to_cpx1(base, inser, @"b1000-1", 1);
+    mgphs_to_cpx1(base, inser, @"b1000-2", 1);
+}
+
+void
+read_pc3()  // Nasu-15
+{
+    NSString            *base = @"../toshiba_images/DWI-nasu-15";
+    NSString            *inser = @"OrigImages/tmp";
+
+    mgphs_to_cpx1(base, inser, @"b10-1", 1);
+    mgphs_to_cpx1(base, inser, @"b10-2", 1);
+    mgphs_to_cpx1(base, inser, @"b10-3", 1);
+    mgphs_to_cpx1(base, inser, @"b500-1", 1);
+    mgphs_to_cpx1(base, inser, @"b500-2", 1);
+    mgphs_to_cpx1(base, inser, @"b500-3", 1);
+    mgphs_to_cpx1(base, inser, @"b1000-1", 1);
+    mgphs_to_cpx1(base, inser, @"b1000-2", 1);
+    mgphs_to_cpx1(base, inser, @"b1000-3", 1);
+}
+
+void
 pc_roi()
 {
 	NSString			*base = @"../toshiba_images/DWI-nasu-5";
@@ -627,21 +675,121 @@ pc_roi()
 }
 
 void
+nps()
+{
+    NSString    *base = @"../toshiba_images/DWI-nasu-14";
+    NSString    *inser = @"b1000-2";
+    NSString    *path;
+    RecImage    *img, *slc1, *slc2;
+    RecImage    *iflt, *nps;
+    int         i, ix, n;
+    float       mg;
+
+    path = [NSString stringWithFormat:@"%@/%@/img0.cpx", base, inser];
+    img = [RecImage imageWithKOImage:path];
+    [img saveAsKOImage:@"IMG_in"];
+    n = [img zDim] - 1;
+    nps = [img copy];
+
+// test HPF
+    if (1) {
+        [nps gauss2DHP:0.8 frac:0.9];
+        [nps saveAsKOImage:@"IMG_hpf"];
+        exit(0);
+    }
+
+    for (i = ix = 0; i < n; i++) {
+        slc1 = [img sliceAtIndex:i];
+        slc2 = [img sliceAtIndex:i + 1];
+        [slc1 subImage:slc2];
+        mg = [slc1 rmsVal];
+        if (1) {//mg < 5.0) {
+         //   printf("%d %f\n", i, mg);
+            [nps copySlice:slc1 atIndex:ix];
+            ix++;
+        }
+    }
+    [nps crop:[nps zLoop] to:ix startAt:0];
+    [nps saveAsKOImage:@"IMG_dif"];
+    [nps magnitude];
+    [nps avgForLoop:[nps zLoop]];
+    [nps fft2d:REC_INVERSE];
+    [nps saveAsKOImage:@"IMG_nps"];
+
+// guess inverse
+//[nps crop:[nps xLoop] to:64];
+    iflt = [nps copy];
+    [iflt clear];
+    [iflt addConst:1.0];
+    [iflt fGauss1DLP:0.25 forLoop:[iflt xLoop]];
+    [iflt fGauss1DLP:0.5 forLoop:[iflt yLoop]];
+    [iflt magnitude];
+    [iflt saveAsKOImage:@"IMG_iflt"];
+    [iflt invert];
+    [iflt clipAt:20 frac:NO];
+    [iflt saveAsKOImage:@"IMG_iflt"];
+    [nps multByImage:iflt];
+    [nps saveAsKOImage:@"IMG_nps2"];
+
+// test inverse filter
+    [img fft2d:REC_INVERSE];
+    [img multByImage:iflt];
+    [img fft2d:REC_FORWARD];
+    [img saveAsKOImage:@"IMG_f"];
+
+
+}
+
+void
 pc_avg()
 {
-	NSString	*base = @"../toshiba_images/DWI-nasu-5";
+//    NSString    *base = @"../toshiba_images/DWI-nasu-5";
+//    NSString    *base = @"../toshiba_images/DWI-nasu-14";
+    NSString    *base = @"../toshiba_images/DWI-nasu-15";
 //	NSString	*inser = @"3V";
-	NSString	*inser = @"3Vu";
+//	NSString	*inser = @"3Vu";
 //	NSString	*inser = @"4V";
 //	NSString	*inser = @"4Vu";
-	NSString	*path;
+
+//    NSString    *inser = @"b10-1";
+//    NSString    *inser = @"b10-2";
+//    NSString    *inser = @"b10-3";
+    NSString    *inser = @"b500-1";
+//    NSString    *inser = @"b500-2";
+//    NSString    *inser = @"b500-3";
+//    NSString    *inser = @"b1000-1";
+//    NSString    *inser = @"b1000-2";
+//    NSString    *inser = @"b1000-3";
+    NSString	*path;
+    RecImage    *mag, *phs;
 	RecImage	*img, *avg;
 	int			dim, nImg;
 
+
 	path = 	[NSString stringWithFormat:@"%@/%@/img0.cpx", base, inser];
 	img = [RecImage imageWithKOImage:path];
-	[img phase];
-	[img removeSliceAtIndex:0 forLoop:[img zLoop]];
+    [img crop:[img xLoop] to:64];   // 64
+    [img crop:[img yLoop] to:64]; // startAt:58];   // 64
+    path =     [NSString stringWithFormat:@"%@/%@/img0.in", base, inser];
+    [img saveAsKOImage:path];
+
+if (0) {
+    [img fft2d:REC_INVERSE];
+    [img crop:[img xLoop] to:64];   // 64
+    [img crop:[img yLoop] to:64];   // 64
+    path = [NSString stringWithFormat:@"%@/%@/img0crf.img", base, inser];
+    [img saveAsKOImage:path];
+    [img fft2d:REC_FORWARD];
+    path = [NSString stringWithFormat:@"%@/%@/img0cr.img", base, inser];
+    [img saveAsKOImage:path];
+
+//    exit(0);
+}
+    
+//	[img phase];
+    img = [img unwrap2d];    // not perfect, but works
+    
+//	[img removeSliceAtIndex:0 forLoop:[img zLoop]];
 	path = 	[NSString stringWithFormat:@"%@/%@/img0.phs", base, inser];
 	[img saveAsKOImage:path];
 
@@ -652,7 +800,7 @@ pc_avg()
 
 	avg = [img copy];
 
-	[avg gauss1DLP:0.1 forLoop:[avg zLoop]];
+	[avg gauss1DLP:0.01 forLoop:[avg zLoop]];
     [avg gauss2DHP:0.05 frac:1.0];
 	path = 	[NSString stringWithFormat:@"%@/%@/phase.mvavg", base, inser];
 	[avg saveAsKOImage:path];
@@ -1609,3 +1757,277 @@ partial()
     sg2 = m2 * exp(-te / t2_2); printf("2) %f %f\n", m2, sg2);
     t2_1 = -te / log(sg1 + sg2); printf("t2_partial = %f\n", t2_1);
 }
+
+// Dyke 2020
+//  time(h) sas     4v      3v      lv
+//  0       0       0       0       0
+//  1.8     91      80      50      40    
+//  3.6     125     83      42      34
+//  5.4     124     69      41      28
+//  7.6     125     68      48      40
+//  10.9    105     31      28      23
+
+// Ringstad 2017
+//ref
+//  t     sas     4v    3v     lv
+//    0    0    0    0    0
+//    0.3    165    90    20    7
+//    0.6    263    122    39    7
+//    1.0    301    113    34    12
+//    2.0    410    138    30    14
+//    4.0    375    175    95    20
+//    6.0    355    184    117    26
+//    9.0    320    145    90    40
+//    24.0    99    48    40    20
+//
+//iNPH
+//    t     sas     4v     3v     lv
+//    0    0    0    0    0
+//    0.3    99    118    67    7
+//    0.6    100    128    77    7
+//    1.0    206    216    98    7
+//    2.0    253    233    178    47
+//    4.0    351    379    221    68
+//    6.0    365    361    226    125
+//    9.0    338    326    243    155
+//    24.0    204    169    175    134
+
+void
+time_lpf(float *p, int n)
+{
+    int     i, j, k, w = 1;
+    float   a, *q;
+
+    q = (float *)malloc(sizeof(float) * n);
+    for (i = 0; i < n; i++) {
+        a = 0;
+        for (j = -w; j <= w; j++) {
+            k = i + j;
+            if (k >= 0 && k < n) {
+                a += p[k];
+            }
+            q[i] = a / (2*w + 1);
+        }
+    }
+    for (i = 0; i < n; i++) {
+        p[i] = q[i];
+    }
+}
+
+// c, qi, qo : input
+// k1, k2 : output
+void
+est_k(float *ci, float *qi, float *qo, int n, int skip, float *k1, float *k2)
+{
+    int     i, ix;
+    float   a, b, c, d, e, f;
+
+    a = b = c = d = e = f = 0;
+    for (i = 0; i < n; i++) {
+        ix = i * skip;
+        a += qi[ix]*qi[ix];
+        b -= qi[ix]*qo[ix];
+        c += ci[ix]*qi[ix];
+        e += qo[ix]*qo[ix];
+        f -= ci[ix]*qo[ix];
+    }
+    d = b;
+    
+    *k1 = (c*e - b*f) / (a*e - b*d);
+    *k2 = (a*f - c*d) / (a*e - b*d);
+}
+
+void
+vcomp2()
+{
+// Dyke
+    float   tm[] = {0, 1.8, 3.6, 5.4, 7.6, 10.9};
+    float   cS[] = {0, 91, 125, 124, 125, 105};
+    float   c4[] = {0, 80, 83, 69, 68, 31};
+    float   c3[] = {0, 50, 42, 41, 48, 28};
+    float   cL[] = {0, 40, 34, 28, 40, 23};
+    int     nt = 6;
+
+// Ringstad ref
+//    float   tm[] = {0, 0.3, 0.6, 1.0, 2.0, 4.0, 6.0, 9.0, 24.0};
+//    float   cS[] = {0, 165, 263, 301, 410, 375, 355, 320, 99};
+//    float   c4[] = {0, 90, 122, 113, 138, 175, 184, 145, 48};
+//    float   c3[] = {0, 20, 39, 34, 30, 95, 117, 90, 40};
+//    float   cL[] = {0, 7, 7, 12, 14, 20, 26, 40, 20};
+//    int     nt = 9;
+
+// Ringstad iNPH
+//    float   tm[] = {0, 0.3, 0.6, 1.0, 2.0, 4.0, 6.0, 9.0, 24.0};
+//    float   cS[] = {0, 99, 100, 206, 253, 351, 365, 338, 204};
+//    float   c4[] = {0, 118, 128, 216, 233, 379, 361, 326, 169};
+//    float   c3[] = {0, 67, 77, 98, 178, 221, 226, 243, 175};
+//    float   cL[] = {0, 7, 7, 7, 47, 68, 125, 155, 134};
+//    int     nt = 9;
+
+    float       dt;
+    float       k1[3], k2[3];
+    float       dqi[3], dqo[3];   // delta mass
+    RecImage    *Qi, *Qo, *Ce;   // 3 x nt
+    float       *qi, *qo, *ce;
+    int         i, j;
+
+    Qi = [RecImage imageOfType:RECIMAGE_REAL xDim:3 yDim:nt];   // mass in
+    Qo = [RecImage imageWithImage:Qi];                          // mass out
+    Ce = [RecImage imageWithImage:Qi];                          // conc est
+    qi = [Qi data];
+    qo = [Qo data];
+    ce = [Ce data];
+    [Qi clear];
+    [Qo clear];
+    [Ce clear];
+
+// input
+    for (i = 0; i < nt; i++) {
+        printf("%6.2f %6.2f %6.2f %6.2f\n", tm[i], c4[i], c3[i], cL[i]);
+    }
+    printf("\n");
+    
+// LPF
+    time_lpf(c4, nt);
+    time_lpf(c3, nt);
+    time_lpf(cL, nt);
+    for (i = 0; i < nt; i++) {
+        printf("%6.2f %6.2f %6.2f %6.2f\n", tm[i], c4[i], c3[i], cL[i]);
+    }
+    printf("\n");
+
+    for (i = 0; i < nt; i++) {
+
+// mass transfer between compartments -> save for later use (curve fitting)
+        if (i == 0) {
+            for (j = 0; j < 3; j++) {
+                dqi[j] = dqo[j] = 0;
+            }
+        } else {
+            dt = tm[i] - tm[i-1];
+            dqi[0] = ((cS[i] - 2*c4[i] + c3[i]) + (cS[i-1] - 2*c4[i-1] + c3[i-1])) / 2;
+            dqi[1] = ((c4[i] - 2*c3[i] + cL[i]) + (c4[i-1] - 2*c3[i-1] + cL[i-1])) / 2;
+            dqi[2] = ((c3[i] - cL[i]) + (c3[i-1] - cL[i-1])) / 2;
+            dqo[0] = (c4[i] + c4[i-1]) / 2;
+            dqo[1] = (c3[i] + c3[i-1]) / 2;
+            dqo[2] = (cL[i] + cL[i-1]) / 2;
+            for (j = 0; j < 3; j++) {
+                qi[i*3 + j] += dqi[j] * dt;
+                qo[i*3 + j] += dqo[j] * dt;
+            }
+        }
+    }
+    est_k(c4, qi + 0, qo + 0, nt, 3, k1 + 0, k2 + 0);
+    est_k(c3, qi + 1, qo + 1, nt, 3, k1 + 1, k2 + 1);
+    est_k(cL, qi + 2, qo + 2, nt, 3, k1 + 2, k2 + 2);
+
+    printf("k1, k2\n");
+    for (i = 0; i < 3; i++) {
+        printf("%6.2f %6.2f\n", k1[i], k2[i]);
+    }
+    printf("\n");
+
+// try manual -> chk solution
+k1[0] = 0;  k2[0] = 0;
+k1[1] = 2.0; k2[1] = 0.0;
+k1[2] = 1.0;  k2[2] = 0.2;
+
+    [Qi saveAsKOImage:@"IMG_qi"];
+    [Qo saveAsKOImage:@"IMG_qo"];
+    for (i = 0; i < nt; i++) {
+        for (j = 0; j < 3; j++) {
+            ce[i*3 + j] = qi[i*3 + j] * k1[j] - qo[i*3 + j] * k2[j];
+        }
+ //       printf("%6d ", i);
+        printf("%6.2f ", tm[i]);
+   //     for (j = 0; j < 3; j++) { // 4, 3, L
+        for (j = 1; j < 3; j++) {   // 3, L
+            printf("%6.2f ", ce[i*3 + j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
+
+}
+
+//void  Num_rk4(float *x, float *y, float (^deriv)(float x, float y), float step);    // not tested yet
+void
+vcomp3()
+{
+    float       x, y, yin;
+    float       len = 12.0; // hour
+    float       dt = 0.01;  // hour
+    float       t;
+    int         i, j, n;
+    FILE        *fp;
+    float       (^deriv)(float x, float y);
+
+    deriv = ^float(float x, float y) {
+        float   dd;
+    
+        return dd;
+    };
+
+    n = len / dt;
+
+    x = y = 0;
+    fp = fopen("vcomp.txt", "w");
+    for (i = 0; i < n; i++) {
+        t = (float)i * dt;
+        yin = 66 * t * exp(-0.18 * t); // input
+        Num_rk4(&x, &y, deriv, dt);
+        fprintf(fp, "%5.2f %5.2f %5.2f\n", x, y, yin);
+    }
+    fclose(fp);
+}
+
+void
+vcomp1()
+{
+    Num_data    *data;
+    float       c[4];
+    float       dc[4];
+    float       dt = 0.001;
+    float       v[4];
+    float       k[4];
+    float       t;
+    int         i, j, n;
+    FILE        *fp;
+
+//    data = Num_alloc_data(4);
+    printf("vcomp\n");
+
+    n = 120 / dt;
+
+    if (1) {
+        k[0] = 1000;
+        k[1] = k[2] = k[3] = 0;
+    } else {
+        k[0] = 0.9;
+        k[1] = k[2] = k[3] = 0.0;
+    }
+    v[1] = 1.0;     // 4v
+    v[2] = 1.0;     // 3v
+    v[3] = 15.0;    // lv
+
+    for (i = 0; i < 4; i++) {
+        c[i] = dc[i] = 0;
+    }
+    fp = fopen("vcomp.txt", "w");
+    for (j = 0; j < 120; j++) {
+        t = j * 0.1;
+        dc[1] = c[0] * k[0] - 2 * c[1] * k[0] - c[1] * k[1];
+//        dc[2] = c[1] * k[0] - 2 * c[2] * k[0] - c[2] * k[2];
+//        dc[3] = c[2] * k[0] - c[3] * k[0]     - c[3] * k[3];
+        
+        c[0] = 66 * t * exp(-0.18 * t); // input
+        c[1] = (c[1] * 2 + dc[1]/v[1]) * dt / 2;
+        c[2] += dc[2]/v[2] * dt;
+        c[3] += dc[3]/v[3] * dt;
+
+//        printf("%5.2f %5.2f %5.2f %5.2f %5.2f\n", t, c[0], c[1], c[2], c[3]);
+        fprintf(fp, "%5.2f %5.2f %5.2f %5.2f %5.2f\n", t, c[0], c[1], c[2], c[3]);
+    }
+    fclose(fp);
+}
+
